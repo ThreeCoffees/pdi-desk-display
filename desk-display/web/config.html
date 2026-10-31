@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<head>
+    <title>Config page</title>
+    <style>
+        :root {
+            --inactive-bg-color: rgb(230, 230, 230);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        body {
+            max-width: 30em;
+        }
+        form {
+            margin-bottom: 2em;
+            display: grid;
+            row-gap: 2px;
+            /* grid-template-columns: max-content auto; */
+            border-top-style: solid;
+            align-self: center;
+        }
+        input, button, textarea {
+            border-width: 1px;
+        }
+        input[type="submit"] {
+            margin-top: 10px;
+        }
+        input:read-only {
+            background-color: var(--inactive-bg-color);
+        }
+
+    </style>
+</head>
+<body>
+    <h1>Display configuration page</h1>
+
+    <form name="WiFi Access Point">
+        <p>These are board's Access Point credentials. These is what you'll use to connect to the board from your computer. They are read-only, so you won't accidentally lose access to this page.</p>
+        <label for="SSID">Board's SSID</label>
+        <input name="SSID" type="text" readonly>
+
+        <label for="Password">Password</label>
+        <input name="Password" type="password" readonly>
+
+        <label for="IP">Static IP Address</label>
+        <input name="IP" type="text" readonly>
+    </form>
+
+    <form name="WiFi Internet connection">
+    <p>Provide the credentials of the WiFi network the board will use to connect to the public Internet.</p>
+    <label for="SSID">Internet router's SSID</label>
+        <input name="SSID" type="text">
+
+        <label for="Password">Password</label>
+        <input name="Password" type="password">
+        <input type="submit" value="Submit WiFi Internet connection">
+        <button>Test Internet connection</button>
+    </form>
+
+    <form name="RSS Feeds">
+        <p>Configure watched RSS feeds. Add each link to an RSS file (typically .xml or .rss) in a new line.</p>
+        <textarea readonly class="rss-feed-box" style="resize: none; background-color: var(--inactive-bg-color);">
+https://example.com/feed.rss
+https://example.com/rss.xml
+</textarea>
+
+        <textarea class="rss-feed-box" style="resize: vertical;" rows="10">
+https://kitty-ku/neocities.org/feed.xml
+</textarea>
+
+        <input type="submit" value="Submit RSS feeds">
+    </form>
+</body>

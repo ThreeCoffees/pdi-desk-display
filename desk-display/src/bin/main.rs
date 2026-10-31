@@ -8,6 +8,7 @@
 #![deny(clippy::large_stack_frames)]
 
 use defmt::info;
+use desk_display::wifi::start_wifi;
 use embassy_executor::Spawner;
 use embassy_time::{Duration, Timer};
 use esp_hal::clock::CpuClock;
@@ -41,12 +42,8 @@ async fn main(spawner: Spawner) -> ! {
 
     info!("Embassy initialized!");
 
-    let _wifi_controller =
-        esp_radio::wifi::WifiController::new(peripherals.WIFI, Default::default())
-            .expect("Failed to initialize Wi-Fi controller");
-    let _wifi_interface = esp_radio::wifi::Interface::station();
+    start_wifi(spawner, peripherals.WIFI).await;
 
-    // TODO: Spawn some tasks
     let _ = spawner;
 
     loop {

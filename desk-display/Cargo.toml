@@ -1,8 +1,8 @@
 [package]
-edition      = "2024"
-name         = "desk-display"
+edition = "2024"
+name = "desk-display"
 rust-version = "1.95"
-version      = "0.1.0"
+version = "0.1.0"
 
 [[bin]]
 name = "desk-display"
@@ -11,7 +11,7 @@ test = false
 
 [[test]]
 harness = false
-name    = "hello_test"
+name = "hello_test"
 
 [lib]
 test = false
@@ -21,22 +21,22 @@ esp-hal = { version = "~1.2.2", features = ["defmt", "esp32c3", "unstable"] }
 
 esp-rtos = { version = "0.4.0", features = [
     "defmt",
-        "embassy",
-        "esp-alloc",
-        "esp-radio",
-        "esp32c3",
+    "embassy",
+    "esp-alloc",
+    "esp-radio",
+    "esp32c3",
 ] }
 
-defmt                  = "1.0.1"
+defmt = "1.0.1"
 esp-bootloader-esp-idf = { version = "0.6.0", features = ["defmt", "esp32c3"] }
 
 embassy-net = { version = "0.9.1", features = [
     "defmt",
-        "dhcpv4",
-        "medium-ethernet",
-        "tcp",
-        "udp",
-        "dns"
+    "dhcpv4",
+    "medium-ethernet",
+    "tcp",
+    "udp",
+    "dns",
 ] }
 embedded-io = { version = "0.7.1", features = ["defmt"] }
 embedded-io-async = { version = "0.7.0", features = ["defmt"] }
@@ -49,38 +49,38 @@ embassy-time = { version = "0.5.0", features = ["defmt"] }
 embassy-futures = "0.1.0"
 esp-radio = { version = "1.0.0-beta.1", features = [
     "defmt",
-        "esp-alloc",
-        "esp32c3",
-        "unstable",
-        "wifi",
+    "esp-alloc",
+    "esp32c3",
+    "unstable",
+    "wifi",
 ] }
 smoltcp = { version = "0.14.0", default-features = false, features = [
     "defmt",
-        "medium-ethernet",
-        "multicast",
-        "proto-dhcpv4",
-        "proto-dns",
-        "proto-ipv4",
-        "socket-dns",
-        "socket-icmp",
-        "socket-raw",
-        "socket-tcp",
-        "socket-udp",
+    "medium-ethernet",
+    "multicast",
+    "proto-dhcpv4",
+    "proto-dns",
+    "proto-ipv4",
+    "socket-dns",
+    "socket-icmp",
+    "socket-raw",
+    "socket-tcp",
+    "socket-udp",
 ] }
 
 critical-section = "1.2.0"
 static_cell = { version = "2.1.1", features = ["nightly"] }
-reqwless = {version = "0.14.0", default-features = false, features = [
+reqwless = { version = "0.14.0", default-features = false, features = [
     "embedded-tls",
-        "defmt"
-]}
+    "defmt",
+] }
 der = { version = "=0.8.3", features = ["heapless"] }
 
 [dev-dependencies]
 embedded-test = { version = "0.7.1", features = [
     "defmt",
-        "embassy-010",
-        "external-executor",
+    "embassy-010",
+    "external-executor",
 ] }
 
 # For fine tuning these settings, please refer to https://doc.rust-lang.org/cargo/reference/profiles.html
@@ -90,10 +90,10 @@ embedded-test = { version = "0.7.1", features = [
 opt-level = "s"
 
 [profile.release]
-codegen-units = 1     # LLVM can perform better optimizations using a single thread
-debug         = 2     # prefer slower builds but better debugging experience
-lto           = 'fat'
-opt-level     = 's'
+codegen-units = 1 # LLVM can perform better optimizations using a single thread
+debug = 2         # prefer slower builds but better debugging experience
+lto = 'fat'
+opt-level = 's'
 
 [build-dependencies]
 dotenvy = "0.15"

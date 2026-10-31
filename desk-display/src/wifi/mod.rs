@@ -4,7 +4,7 @@ use defmt::info;
 use embassy_executor::Spawner;
 use embassy_futures::select::Either;
 use embassy_net::{
-    IpListenEndpoint, Ipv4Cidr, Runner, StackResources, StaticConfigV4,
+    IpListenEndpoint, Ipv4Cidr, Runner, Stack, StackResources, StaticConfigV4,
     dns::DnsSocket,
     tcp::{
         TcpSocket,
@@ -13,10 +13,7 @@ use embassy_net::{
 };
 use embassy_time::{Duration, Timer};
 use embedded_io_async::Read;
-use esp_hal::{
-    peripherals::{Peripherals, WIFI},
-    rng::Rng,
-};
+use esp_hal::{peripherals::WIFI, rng::Rng};
 use esp_radio::wifi::{
     Config, ControllerConfig, Interface, WifiController, ap::AccessPointConfig, sta::StationConfig,
 };
@@ -24,7 +21,7 @@ use reqwless::{
     client::HttpClient,
     request::{Method, RequestBuilder},
 };
-use static_cell::make_static;
+use static_cell::StaticCell;
 
 const EXTERNAL_WIFI_SSID: &str = env!("EXTERNAL_WIFI_SSID");
 const EXTERNAL_WIFI_PASSWORD: &str = env!("EXTERNAL_WIFI_PASSWORD");
@@ -32,7 +29,19 @@ const EXTERNAL_WIFI_PASSWORD: &str = env!("EXTERNAL_WIFI_PASSWORD");
 const WIFI_SSID: &str = env!("WIFI_SSID");
 const WIFI_PASSWORD: &str = env!("WIFI_PASSWORD");
 
-pub async fn start_wifi(spawner: Spawner, wifi_peripheral: WIFI<'static>) {
+
+static AP_RESOURCES: StaticCell<StackResources<3>> = StaticCell::new();
+static STA_RESOURCES: StaticCell<StackResources<4>> = StaticCell::new();
+
+static TCP_CLIENT_STATE: StaticCell<TcpClientState<1, 1500, 1500>> =
+    StaticCell::new();
+
+#[embassy_executor::task]
+pub async fn wifi_start_task(spawner: Spawner, wifi: WIFI<'static>) {
+    start_wifi(spawner, wifi).await;
+}
+
+async fn start_wifi(spawner: Spawner, wifi_peripheral: WIFI<'static>) {
     let access_point_station_config = Config::AccessPointStation(
         StationConfig::default()
             .with_ssid(EXTERNAL_WIFI_SSID.try_into().unwrap())
@@ -72,13 +81,13 @@ pub async fn start_wifi(spawner: Spawner, wifi_peripheral: WIFI<'static>) {
     let (ap_stack, ap_runner) = embassy_net::new(
         wifi_ap_device,
         ap_config,
-        make_static!(StackResources::<3>::new()),
+        AP_RESOURCES.init(StackResources::<3>::new()),
         seed,
     );
     let (sta_stack, sta_runner) = embassy_net::new(
         wifi_sta_device,
         sta_config,
-        make_static!(StackResources::<4>::new()),
+        STA_RESOURCES.init(StackResources::<4>::new()),
         seed,
     );
 
@@ -102,12 +111,19 @@ pub async fn start_wifi(spawner: Spawner, wifi_peripheral: WIFI<'static>) {
         WIFI_SSID
     );
     info!("Use a static IP in the range 192.168.2.2 .. 192.168.2.255, use gateway 192.168.2.1");
-    info!("Or connect to the ap `{}` and point your browser to http://{}:8080/", EXTERNAL_WIFI_SSID, sta_address);
+    info!(
+        "Or connect to the ap `{}` and point your browser to http://{}:8080/",
+        EXTERNAL_WIFI_SSID, sta_address
+    );
 
-    // Init HTTP client
+    spawner.spawn(wifi_connection_loop(ap_stack, sta_stack).unwrap());
+}
+
+#[embassy_executor::task]
+async fn wifi_connection_loop(ap_stack: Stack<'static>, sta_stack: Stack<'static>) {
     let tcp_client = TcpClient::new(
         sta_stack,
-        make_static!(TcpClientState::<1, 1500, 1500>::new()),
+        TCP_CLIENT_STATE.init(TcpClientState::<1, 1500, 1500>::new()),
     );
     let dns_client = DnsSocket::new(sta_stack);
 
@@ -118,14 +134,14 @@ pub async fn start_wifi(spawner: Spawner, wifi_peripheral: WIFI<'static>) {
 
     let mut ap_server_socket =
         TcpSocket::new(ap_stack, &mut ap_server_rx_buffer, &mut ap_server_tx_buffer);
-    ap_server_socket.set_timeout(Some(embassy_time::Duration::from_secs(10)));
+    ap_server_socket.set_timeout(Some(Duration::from_secs(10)));
 
     let mut sta_server_socket = TcpSocket::new(
         sta_stack,
         &mut sta_server_rx_buffer,
         &mut sta_server_tx_buffer,
     );
-    sta_server_socket.set_timeout(Some(embassy_time::Duration::from_secs(10)));
+    sta_server_socket.set_timeout(Some(Duration::from_secs(10)));
 
     loop {
         info!("Wait for connection...");

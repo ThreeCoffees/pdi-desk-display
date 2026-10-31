@@ -31,6 +31,9 @@
         input:read-only {
             background-color: var(--inactive-bg-color);
         }
+        .invalid {
+            background-color: orange;
+        }
 
     </style>
 </head>
@@ -38,7 +41,7 @@
     <h1>Display configuration page</h1>
 
     <form name="WiFi Access Point">
-        <p>These are board's Access Point credentials. These is what you'll use to connect to the board from your computer. They are read-only, so you won't accidentally lose access to this page.</p>
+        <p>These are board's Access Point credentials. These are what you'll use to connect to the board from your computer. They are read-only, so you won't accidentally lose access to this page.</p>
         <label for="SSID">Board's SSID</label>
         <input name="SSID" type="text" readonly>
 
@@ -52,7 +55,7 @@
     <form name="WiFi Internet connection">
     <p>Provide the credentials of the WiFi network the board will use to connect to the public Internet.</p>
     <label for="SSID">Internet router's SSID</label>
-        <input name="SSID" type="text">
+        <input name="SSID" type="text" oninput="validateSSID(this)">
 
         <label for="Password">Password</label>
         <input name="Password" type="password">
@@ -67,10 +70,49 @@ https://example.com/feed.rss
 https://example.com/rss.xml
 </textarea>
 
-        <textarea class="rss-feed-box" style="resize: vertical;" rows="10">
-https://kitty-ku/neocities.org/feed.xml
+        <textarea class="rss-feed-box" id="rss-source" style="resize: vertical;" rows="10" oninput="validateRSS(this)">
+https://kitty-ku.neocities.org/feed.xml
 </textarea>
 
         <input type="submit" value="Submit RSS feeds">
     </form>
+    <script>
+        function validateSSID(source) {
+            let str = source.value;
+            handleValidity(source, isValidSSID(str))
+        }
+
+        function validateRSS(source) {
+            // let source = document.getElementById("rss-source")
+            let lines = source
+                .value.split(/\r?\n/)
+                .filter((str) => !isJustWhitespace(str))
+
+            let isValid = ! lines.some((url) => !isValidUrl(url))
+
+            handleValidity(source, isValid)
+        }
+
+        function handleValidity(element, isValid) {
+            if (!isValid) {
+                element.classList.add("invalid")
+            } else {
+                element.classList.remove("invalid")
+            }
+        }
+        
+        function isValidUrl(str) {
+            try {
+                new URL(str);
+                return true;
+            } catch (err) {
+                return false;
+            }
+        }
+        // Source - https://stackoverflow.com/q/45249961
+        // Retrieved 2026-10-31, License - CC BY-SA 3.0
+        function isValidSSID(str) { return ! /^[!#;].|[+\[\]/"\t\s].*$/.test(str); }
+
+        function isJustWhitespace(str) { return /^\s*$/.test(str) }
+    </script>
 </body>

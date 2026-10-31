@@ -19,7 +19,7 @@ use esp_radio::wifi::{
 };
 use reqwless::{
     client::HttpClient,
-    request::{Method, RequestBuilder},
+    request::{Method},
 };
 use static_cell::StaticCell;
 
@@ -29,12 +29,10 @@ const EXTERNAL_WIFI_PASSWORD: &str = env!("EXTERNAL_WIFI_PASSWORD");
 const WIFI_SSID: &str = env!("WIFI_SSID");
 const WIFI_PASSWORD: &str = env!("WIFI_PASSWORD");
 
-
 static AP_RESOURCES: StaticCell<StackResources<3>> = StaticCell::new();
 static STA_RESOURCES: StaticCell<StackResources<4>> = StaticCell::new();
 
-static TCP_CLIENT_STATE: StaticCell<TcpClientState<1, 1500, 1500>> =
-    StaticCell::new();
+static TCP_CLIENT_STATE: StaticCell<TcpClientState<1, 1500, 1500>> = StaticCell::new();
 
 #[embassy_executor::task]
 pub async fn wifi_start_task(spawner: Spawner, wifi: WIFI<'static>) {
@@ -95,192 +93,167 @@ async fn start_wifi(spawner: Spawner, wifi_peripheral: WIFI<'static>) {
     spawner.spawn(net_task(ap_runner).unwrap());
     spawner.spawn(net_task(sta_runner).unwrap());
 
-    let sta_address = loop {
-        if let Some(config) = sta_stack.config_v4() {
-            let address = config.address.address();
-            info!("Got IP: {}", address);
-            break address;
-        }
-        info!("Waiting for IP...");
-        Timer::after(Duration::from_millis(500)).await;
-    };
+    // Wait for the AP to become operational. Do not block on external Wi-Fi.
     ap_stack.wait_config_up().await;
 
-    info!(
-        "Connect to the AP `{}` and point your browser to http://192.168.2.1:8080/",
-        WIFI_SSID
-    );
-    info!("Use a static IP in the range 192.168.2.2 .. 192.168.2.255, use gateway 192.168.2.1");
-    info!(
-        "Or connect to the ap `{}` and point your browser to http://{}:8080/",
-        EXTERNAL_WIFI_SSID, sta_address
-    );
+    info!("AP `{}` ready at http://192.168.2.1:8080/", WIFI_SSID);
 
-    spawner.spawn(wifi_connection_loop(ap_stack, sta_stack).unwrap());
+    spawner.spawn(wifi_connection_loop(ap_stack).unwrap());
+
+    spawner
+        .spawn(
+            sta_http_poll_task(sta_stack, "http://httpbin.org/get?hello=Hello+esp-hal", 60)
+            .unwrap(),
+        );
 }
 
 #[embassy_executor::task]
-async fn wifi_connection_loop(ap_stack: Stack<'static>, sta_stack: Stack<'static>) {
-    let tcp_client = TcpClient::new(
-        sta_stack,
-        TCP_CLIENT_STATE.init(TcpClientState::<1, 1500, 1500>::new()),
-    );
-    let dns_client = DnsSocket::new(sta_stack);
+async fn wifi_connection_loop(ap_stack: Stack<'static>) {
+    use embedded_io_async::Write;
 
-    let mut ap_server_rx_buffer = [0; 1536];
-    let mut ap_server_tx_buffer = [0; 1536];
-    let mut sta_server_rx_buffer = [0; 1536];
-    let mut sta_server_tx_buffer = [0; 1536];
+    let mut rx_buffer = [0u8; 1536];
+    let mut tx_buffer = [0u8; 1536];
 
-    let mut ap_server_socket =
-        TcpSocket::new(ap_stack, &mut ap_server_rx_buffer, &mut ap_server_tx_buffer);
-    ap_server_socket.set_timeout(Some(Duration::from_secs(10)));
+    let mut socket = TcpSocket::new(ap_stack, &mut rx_buffer, &mut tx_buffer);
 
-    let mut sta_server_socket = TcpSocket::new(
-        sta_stack,
-        &mut sta_server_rx_buffer,
-        &mut sta_server_tx_buffer,
-    );
-    sta_server_socket.set_timeout(Some(Duration::from_secs(10)));
+    socket.set_timeout(Some(Duration::from_secs(10)));
 
     loop {
-        info!("Wait for connection...");
-        let either_socket = embassy_futures::select::select(
-            ap_server_socket.accept(IpListenEndpoint {
-                addr: None,
-                port: 8080,
-            }),
-            sta_server_socket.accept(IpListenEndpoint {
-                addr: None,
-                port: 8080,
-            }),
-        )
-        .await;
-        let (r, server_socket) = match either_socket {
-            Either::First(r) => (r, &mut ap_server_socket),
-            Either::Second(r) => (r, &mut sta_server_socket),
-        };
-        info!("Connected...");
+        info!("AP: waiting for HTTP connection...");
 
-        if let Err(e) = r {
-            info!("connect error: {:?}", e);
+        if let Err(e) = socket
+            .accept(IpListenEndpoint {
+                addr: None,
+                port: 8080,
+            })
+            .await
+        {
+            info!("AP accept error: {:?}", e);
+            socket.abort();
             continue;
         }
 
-        use embedded_io_async::Write;
+        info!("AP: client connected");
 
-        let mut buffer = [0u8; 4092];
+        let mut request = [0u8; 1024];
         let mut pos = 0;
-        loop {
-            match server_socket.read(&mut buffer).await {
-                Ok(0) => {
-                    info!("AP read EOF");
-                    break;
-                }
-                Ok(len) => {
-                    let to_print =
-                        unsafe { core::str::from_utf8_unchecked(&buffer[..(pos + len)]) };
 
-                    if to_print.contains("\r\n\r\n") {
-                        info!("{}", to_print);
+        loop {
+            if pos == request.len() {
+                break;
+            }
+
+            match socket.read(&mut request[pos..]).await {
+                Ok(0) => break,
+                Ok(n) => {
+                    pos += n;
+
+                    if request[..pos].windows(4).any(|w| w == b"\r\n\r\n") {
                         break;
                     }
-
-                    pos += len;
                 }
                 Err(e) => {
                     info!("AP read error: {:?}", e);
                     break;
                 }
-            };
+            }
         }
-        if sta_stack.is_link_up() {
-            info!("connecting via HttpClient...");
-            let mut client = HttpClient::new(&tcp_client, &dns_client);
-            let mut rx_buf = [0u8; 4096];
 
-            let builder_result = client
-                .request(Method::GET, "http://httpbin.org/get?hello=Hello+esp-hal")
-                .await;
+        if pos > 0 {
+            match core::str::from_utf8(&request[..pos]) {
+                Ok(request) => info!("AP request: {}", request),
+                Err(_) => info!("AP received invalid UTF-8"),
+            }
+        }
 
-            match builder_result {
-                Ok(req_builder) => {
-                    let headers = [("Host", "httpbin.org"), ("Connection", "close")];
-                    let mut req_builder = req_builder.headers(&headers);
-                    let response_result = req_builder.send(&mut rx_buf).await;
+        let response = b"HTTP/1.1 200 OK\r\n\
+            Content-Type: text/html; charset=utf-8\r\n\
+            Connection: close\r\n\
+            Content-Length: 70\r\n\
+            \r\n\
+            <html><body><h1>Hello from ESP32-C3!</h1></body></html>";
 
-                    match response_result {
-                        Ok(response) => {
-                            info!("HTTP request successful, streaming body...");
+        if let Err(e) = socket.write_all(response).await {
+            info!("AP write error: {:?}", e);
+        }
 
-                            let _ = server_socket.write_all(b"HTTP/1.0 200 OK\r\n").await;
-                            let _ = server_socket
-                                .write_all(b"Content-Type: application/json\r\n")
-                                .await;
-                            let _ = server_socket.write_all(b"Connection: close\r\n\r\n").await;
+        let _ = socket.flush().await;
+        socket.close();
+        socket.abort();
+    }
+}
 
-                            let mut body_reader = response.body().reader();
-                            let mut chunk_buf = [0u8; 1024];
+#[embassy_executor::task]
+async fn sta_http_poll_task(
+    sta_stack: Stack<'static>,
+    url: &'static str,
+    interval_secs: u64,
+) {
+    let tcp_client = TcpClient::new(
+        sta_stack,
+        TCP_CLIENT_STATE.init(
+            TcpClientState::<1, 1500, 1500>::new(),
+        ),
+    );
 
-                            loop {
-                                match body_reader.read(&mut chunk_buf).await {
-                                    Ok(0) => break,
-                                    Ok(n) => {
-                                        if let Err(e) =
-                                            server_socket.write_all(&chunk_buf[..n]).await
-                                        {
-                                            info!("AP write error: {:?}", e);
-                                            break;
-                                        }
-                                    }
-                                    Err(e) => {
-                                        info!("Body read error: {:?}", defmt::Debug2Format(&e));
-                                        break;
-                                    }
+    let dns_client = DnsSocket::new(sta_stack);
+
+    let mut rx_buffer = [0u8; 4096];
+
+    loop {
+        if !sta_stack.is_link_up() || sta_stack.config_v4().is_none() {
+            info!("Station is not connected; waiting...");
+            Timer::after(Duration::from_secs(5)).await;
+            continue;
+        }
+
+        info!("Sending HTTP GET to {}", url);
+
+        let mut client = HttpClient::new(&tcp_client, &dns_client);
+
+        match client.request(Method::GET, url).await {
+            Ok(mut builder) => {
+                match builder.send(&mut rx_buffer).await {
+                    Ok(response) => {
+                        info!("HTTP request succeeded");
+
+                        let mut body = response.body().reader();
+                        let mut chunk = [0u8; 256];
+
+                        loop {
+                            match body.read(&mut chunk).await {
+                                Ok(0) => break,
+                                Ok(n) => {
+                                    // Process the response body here.
+                                    info!("Received {} response bytes", n);
+                                }
+                                Err(e) => {
+                                    info!(
+                                        "HTTP response read error: {:?}",
+                                        defmt::Debug2Format(&e)
+                                    );
+                                    break;
                                 }
                             }
                         }
-                        Err(e) => {
-                            info!("Station request error: {:?}", defmt::Debug2Format(&e));
-                            let _ = server_socket
-                                .write_all(
-                                    b"HTTP/1.0 500 Internal Server Error\r\n\r\nRequest failed",
-                                )
-                                .await;
-                        }
+                    }
+                    Err(e) => {
+                        info!(
+                            "HTTP request failed: {:?}",
+                            defmt::Debug2Format(&e)
+                        );
                     }
                 }
-                Err(e) => {
-                    info!("DNS/Connect error: {:?}", defmt::Debug2Format(&e));
-                    let _ = server_socket
-                        .write_all(b"HTTP/1.0 500 Internal Server Error\r\n\r\nDNS Error")
-                        .await;
-                }
             }
-        } else {
-            let r = server_socket
-                .write_all(
-                    b"HTTP/1.0 200 OK\r\n\r\n\
-                    <html>\
-                        <body>\
-                            <h1>Hello Rust! Hello esp-radio! Station is not connected.</h1>\
-                        </body>\
-                    </html>\r\n\
-                    ",
-                )
-                .await;
-            if let Err(e) = r {
-                info!("AP write error: {:?}", e);
+            Err(e) => {
+                info!(
+                    "HTTP DNS/connect error: {:?}",
+                    defmt::Debug2Format(&e)
+                );
             }
         }
-        let r = server_socket.flush().await;
-        if let Err(e) = r {
-            info!("AP flush error: {:?}", e);
-        }
-        Timer::after(Duration::from_millis(1000)).await;
-        server_socket.close();
-        Timer::after(Duration::from_millis(1000)).await;
-        server_socket.abort();
+
+        Timer::after(Duration::from_secs(interval_secs)).await;
     }
 }
 

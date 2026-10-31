@@ -1,9 +1,28 @@
 fn main() {
+    setup_env();
     linker_be_nice();
     println!("cargo:rustc-link-arg-tests=-Tembedded-test.x");
     println!("cargo:rustc-link-arg=-Tdefmt.x");
     // make sure linkall.x is the last linker script (otherwise might cause problems with flip-link)
     println!("cargo:rustc-link-arg=-Tlinkall.x");
+}
+
+fn setup_env() {
+    println!("cargo:rerun-if-changed=.env");
+
+    dotenvy::dotenv().expect("Failed to load .env");
+
+    for key in [
+        "EXTERNAL_WIFI_SSID",
+        "EXTERNAL_WIFI_PASSWORD",
+        "WIFI_SSID",
+        "WIFI_PASSWORD",
+    ] {
+        let value = std::env::var(key)
+            .unwrap_or_else(|_| panic!("Missing environment variable: {key}"));
+
+        println!("cargo:rustc-env={key}={value}");
+    }
 }
 
 fn linker_be_nice() {

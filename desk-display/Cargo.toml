@@ -70,7 +70,11 @@ smoltcp = { version = "0.14.0", default-features = false, features = [
 
 critical-section = "1.2.0"
 static_cell = { version = "2.1.1", features = ["nightly"] }
-reqwless = {version = "0.14.0", default-features = false}
+reqwless = {version = "0.14.0", default-features = false, features = [
+    "embedded-tls",
+        "defmt"
+]}
+der = { version = "=0.8.3", features = ["heapless"] }
 
 [dev-dependencies]
 embedded-test = { version = "0.7.1", features = [

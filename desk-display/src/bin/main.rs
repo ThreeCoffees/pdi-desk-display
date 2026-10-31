@@ -45,7 +45,6 @@ async fn main(spawner: Spawner) -> ! {
     spawner.spawn(wifi_start_task(spawner, peripherals.WIFI).unwrap());
 
     loop {
-        info!("Hello world!");
         Timer::after(Duration::from_secs(1)).await;
     }
     // for inspiration have a look at the examples at https://github.com/esp-rs/esp-hal/tree/esp-hal-v1.2.2/examples

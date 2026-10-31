@@ -18,8 +18,8 @@ use esp_radio::wifi::{
     Config, ControllerConfig, Interface, WifiController, ap::AccessPointConfig, sta::StationConfig,
 };
 use reqwless::{
-    client::HttpClient,
-    request::{Method},
+    client::{HttpClient, TlsConfig, TlsVerify},
+    request::Method,
 };
 use static_cell::StaticCell;
 
@@ -100,11 +100,7 @@ async fn start_wifi(spawner: Spawner, wifi_peripheral: WIFI<'static>) {
 
     spawner.spawn(wifi_connection_loop(ap_stack).unwrap());
 
-    spawner
-        .spawn(
-            sta_http_poll_task(sta_stack, "http://httpbin.org/get?hello=Hello+esp-hal", 60)
-            .unwrap(),
-        );
+    spawner.spawn(sta_http_poll_task(sta_stack, "https://news.ycombinator.com/rss", 60).unwrap());
 }
 
 #[embassy_executor::task]
@@ -184,16 +180,10 @@ async fn wifi_connection_loop(ap_stack: Stack<'static>) {
 }
 
 #[embassy_executor::task]
-async fn sta_http_poll_task(
-    sta_stack: Stack<'static>,
-    url: &'static str,
-    interval_secs: u64,
-) {
+async fn sta_http_poll_task(sta_stack: Stack<'static>, url: &'static str, interval_secs: u64) {
     let tcp_client = TcpClient::new(
         sta_stack,
-        TCP_CLIENT_STATE.init(
-            TcpClientState::<1, 1500, 1500>::new(),
-        ),
+        TCP_CLIENT_STATE.init(TcpClientState::<1, 1500, 1500>::new()),
     );
 
     let dns_client = DnsSocket::new(sta_stack);
@@ -207,49 +197,57 @@ async fn sta_http_poll_task(
             continue;
         }
 
-        info!("Sending HTTP GET to {}", url);
+        let mut tls_rx_buffer = [0u8; 16640];
+        let mut tls_tx_buffer = [0u8; 16640];
 
-        let mut client = HttpClient::new(&tcp_client, &dns_client);
+        let tls_seed = {
+            let rng = esp_hal::rng::Rng::new();
+            (rng.random() as u64) << 32 | rng.random() as u64
+        };
+
+        let tls = TlsConfig::new(
+            tls_seed,
+            &mut tls_rx_buffer,
+            &mut tls_tx_buffer,
+            TlsVerify::None,
+        );
+
+        let mut client = HttpClient::new_with_tls(&tcp_client, &dns_client, tls);
+
+        info!("Sending HTTP GET to {}", url);
 
         match client.request(Method::GET, url).await {
             Ok(mut builder) => {
                 match builder.send(&mut rx_buffer).await {
                     Ok(response) => {
                         info!("HTTP request succeeded");
-
                         let mut body = response.body().reader();
                         let mut chunk = [0u8; 256];
+                        let mut total_bytes = 0usize;
 
                         loop {
                             match body.read(&mut chunk).await {
                                 Ok(0) => break,
                                 Ok(n) => {
+                                    total_bytes += n;
+
                                     // Process the response body here.
-                                    info!("Received {} response bytes", n);
                                 }
                                 Err(e) => {
-                                    info!(
-                                        "HTTP response read error: {:?}",
-                                        defmt::Debug2Format(&e)
-                                    );
+                                    info!("HTTP response read error: {:?}", e);
                                     break;
                                 }
                             }
                         }
+                        info!("Total response bytes: {}", total_bytes);
                     }
                     Err(e) => {
-                        info!(
-                            "HTTP request failed: {:?}",
-                            defmt::Debug2Format(&e)
-                        );
+                        info!("HTTP request failed: {:?}", e);
                     }
                 }
             }
             Err(e) => {
-                info!(
-                    "HTTP DNS/connect error: {:?}",
-                    defmt::Debug2Format(&e)
-                );
+                info!("HTTP DNS/connect error: {:?}", e);
             }
         }
 

@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <head>
     <title>Config page</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         :root {
             --inactive-bg-color: rgb(230, 230, 230);
@@ -8,8 +9,15 @@
             justify-content: center;
             align-items: center;
         }
+        @media (max-width: 600px) {
+            button, input {
+                min-height: 30px;
+            }
+        }
         body {
             max-width: 30em;
+            margin: 0 auto;
+            padding: 1rem;
         }
         form {
             margin-bottom: 2em;

@@ -60,25 +60,25 @@
         <input name="IP" type="text" readonly>
     </form>
 
-    <form name="WiFi Internet connection">
+    <form name="WiFi Internet connection" method="POST" action="/save-wifi">
     <p>Provide the credentials of the WiFi network the board will use to connect to the public Internet.</p>
     <label for="SSID">Internet router's SSID</label>
-        <input name="SSID" type="text" oninput="validateSSID(this)">
+        <input name="ssid" type="text" oninput="validateSSID(this)">
 
         <label for="Password">Password</label>
-        <input name="Password" type="password">
+        <input name="password" type="password">
         <input type="submit" value="Submit WiFi Internet connection">
         <button>Test Internet connection</button>
     </form>
 
-    <form name="RSS Feeds">
+    <form name="RSS Feeds" method="POST" action='/save-rss'>
         <p>Configure watched RSS feeds. Add each link to an RSS file (typically .xml or .rss) in a new line.</p>
         <textarea readonly class="rss-feed-box" style="resize: none; background-color: var(--inactive-bg-color);">
 https://example.com/feed.rss
 https://example.com/rss.xml
 </textarea>
 
-        <textarea class="rss-feed-box" id="rss-source" style="resize: vertical;" rows="10" oninput="validateRSS(this)">
+        <textarea class="rss-feed-box" id="rss-source" name="rss-feeds" style="resize: vertical;" rows="10" oninput="validateRSS(this)">
 https://kitty-ku.neocities.org/feed.xml
 </textarea>
 

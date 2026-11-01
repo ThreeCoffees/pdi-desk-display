@@ -29,6 +29,14 @@ where
             send_response(socket, "200 OK", "text/html; charset=utf-8", CONFIG_HTML).await?;
         }
 
+        ("GET", "/wifi") => {
+            send_response(socket, "200 OK", "text/plain; charset=utf-8", "wifi ssid").await?;
+        }
+
+        ("GET", "/rss") => {
+            send_response(socket, "200 OK", "text/plain; charset=utf-8", "rss feeds").await?;
+        }
+
         ("POST", "/save-wifi") => {
             handlers::handle_wifi_form(socket, request.headers(), request.body()).await?;
         }

@@ -1,7 +1,8 @@
 use defmt::info;
 use embedded_io_async::Write as AsyncWrite;
-use heapless::Vec;
+use heapless::{String, Vec};
 
+use crate::wifi::config::{WIFI_CONFIG_CHANNEL, WifiCredentials};
 use crate::wifi::http::form::is_urlencoded_form;
 use crate::wifi::http::response::send_redirect;
 use crate::wifi::http::{form::get_form_value, response::send_response};
@@ -45,11 +46,6 @@ where
     }
 }
 
-fn save_rss_feeds(rss_feeds: &str) -> bool {
-    info!("Saving rss feeds: {}", rss_feeds);
-    true
-}
-
 pub async fn handle_wifi_form<S>(socket: &mut S, headers: &str, body: &[u8]) -> Result<(), S::Error>
 where
     S: AsyncWrite,
@@ -72,16 +68,16 @@ where
 
     match (ssid, password) {
         (Some(ssid), Some(password)) => {
-            if save_credentials(ssid, password) {
-                send_redirect(socket).await?;
+            if save_credentials(ssid, password).await {
+                send_redirect(socket).await?
             } else {
                 send_response(
                     socket,
-                    "500 Internal Server Error",
+                    "400 Bad Request",
                     "text/plain",
-                    "Could not save Wi-Fi settings",
+                    "Invalid Wi-Fi credentials",
                 )
-                .await?;
+                .await?
             }
         }
         _ => {
@@ -98,8 +94,27 @@ where
     Ok(())
 }
 
-// Replace this stub with your real configuration persistence.
-fn save_credentials(_ssid: &str, _password: &str) -> bool {
-    info!("saved credentials: {}, {}", _ssid, _password);
+async fn save_credentials(ssid: &str, password: &str) -> bool {
+    let mut ssid_string = String::<32>::new();
+    let mut password_string = String::<64>::new();
+
+    if ssid_string.push_str(ssid).is_err() || password_string.push_str(password).is_err() {
+        return false;
+    }
+
+    let credentials = WifiCredentials {
+        ssid: ssid_string,
+        password: password_string,
+    };
+
+    WIFI_CONFIG_CHANNEL.send(credentials).await;
+
+    info!("New wifi credentials set. SSID: {}", ssid);
+
+    true
+}
+
+fn save_rss_feeds(rss_feeds: &str) -> bool {
+    info!("Saving rss feeds: {}", rss_feeds);
     true
 }

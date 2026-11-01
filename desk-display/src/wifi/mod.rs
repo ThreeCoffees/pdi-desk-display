@@ -9,7 +9,7 @@ use embassy_net::{
 };
 use esp_hal::{peripherals::WIFI, rng::Rng};
 use esp_radio::wifi::{
-    Config, WifiController, ap::AccessPointConfig, sta::StationConfig,
+    Config, ap::AccessPointConfig, sta::StationConfig,
 };
 use esp_radio::wifi::ControllerConfig;
 use reqwless::{
@@ -20,11 +20,9 @@ use static_cell::StaticCell;
 
 mod http;
 mod tasks;
+mod config;
 
 use tasks::{connection, net_task, sta_http_poll_task, wifi_connection_loop};
-
-const EXTERNAL_WIFI_SSID: &str = env!("EXTERNAL_WIFI_SSID");
-const EXTERNAL_WIFI_PASSWORD: &str = env!("EXTERNAL_WIFI_PASSWORD");
 
 const WIFI_SSID: &str = env!("WIFI_SSID");
 const WIFI_PASSWORD: &str = env!("WIFI_PASSWORD");
@@ -41,11 +39,7 @@ pub async fn wifi_start_task(spawner: Spawner, wifi: WIFI<'static>) {
 
 async fn start_wifi(spawner: Spawner, wifi_peripheral: WIFI<'static>) {
     let access_point_station_config = Config::AccessPointStation(
-        StationConfig::default()
-            .with_ssid(EXTERNAL_WIFI_SSID.try_into().unwrap())
-            .with_authentication(esp_radio::wifi::AuthenticationMethodConfig::Wpa2Personal(
-                EXTERNAL_WIFI_PASSWORD.try_into().unwrap(),
-            )),
+        StationConfig::default(),
         AccessPointConfig::default()
             .with_ssid(WIFI_SSID.try_into().unwrap())
             .with_authentication(esp_radio::wifi::AuthenticationMethodConfig::Wpa2Personal(

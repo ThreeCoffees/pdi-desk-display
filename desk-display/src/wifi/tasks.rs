@@ -1,12 +1,22 @@
+use defmt::error;
 use defmt::info;
-use embassy_net::{Runner, Stack, dns::DnsSocket, tcp::{TcpSocket, client::TcpClient}};
+use embassy_futures::select::select;
+use embassy_net::{
+    Runner, Stack,
+    dns::DnsSocket,
+    tcp::{TcpSocket, client::TcpClient},
+};
 use embassy_time::{Duration, Timer};
-use esp_radio::wifi::Interface;
 use embedded_io_async::Read;
+use esp_radio::wifi::Interface;
 
-use crate::wifi::{*};
-use crate::wifi::http::handle_http_connection;
+use esp_radio::wifi::{
+    AuthenticationMethodConfig, Config, WifiController, ap::AccessPointConfig, sta::StationConfig,
+};
 
+use super::config::WifiCredentials;
+use super::*;
+use crate::wifi::{config::WIFI_CONFIG_CHANNEL, http::handle_http_connection};
 
 #[embassy_executor::task]
 pub async fn wifi_connection_loop(ap_stack: Stack<'static>) {
@@ -25,8 +35,8 @@ pub async fn wifi_connection_loop(ap_stack: Stack<'static>) {
             })
             .await;
 
-        if let Err(_err) = handle_http_connection(&mut socket).await {
-            // Don't log request contents or credentials.
+        if let Err(err) = handle_http_connection(&mut socket).await {
+            error!("{}", err);
         }
 
         socket.close();
@@ -115,39 +125,94 @@ pub async fn connection(mut controller: WifiController<'static>) {
     info!("Start connection task");
 
     loop {
-        match controller.connect_async().await {
-            Ok(_) => loop {
-                let info = embassy_futures::select::select(
-                    controller.wait_for_disconnect_async(),
-                    controller.wait_for_access_point_connected_event_async(),
-                )
-                .await;
+        if let Err(error) = controller.connect_async().await {
+            info!("Failed to connect to Wi-Fi: {:?}", error);
 
-                match info {
-                    Either::First(station_disconnected) => {
-                        if let Ok(station_disconnected) = station_disconnected {
-                            info!("Station disconnected: {:?}", station_disconnected);
-                            break;
-                        }
-                    }
-                    Either::Second(event) => {
-                        if let Ok(event) = event {
-                            match event {
-                                esp_radio::wifi::ap::EventInfo::Connected(info) => {
-                                    info!("Station connected: {:?}", info);
-                                }
-                                esp_radio::wifi::ap::EventInfo::Disconnected(info) => {
-                                    info!("Station disconnected: {:?}", info);
-                                }
-                            }
-                        }
+            match select(
+                WIFI_CONFIG_CHANNEL.receive(),
+                Timer::after(Duration::from_secs(5)),
+            )
+            .await
+            {
+                Either::First(credentials) => {
+                    if apply_wifi_credentials(&mut controller, credentials) {
+                        continue;
                     }
                 }
-            },
-            Err(e) => {
-                info!("Failed to connect to wifi: {:?}", e);
-                Timer::after(Duration::from_millis(5000)).await;
+                Either::Second(_) => {}
             }
+
+            continue;
+        }
+        info!("Wi-Fi connection started");
+
+        if wait_for_connection_event(&mut controller).await {
+            continue;
+        }
+    }
+}
+
+/// Waits for a station disconnect, new credentials, or an AP client event.
+///
+/// Returns `true` when the station configuration changes or the station
+/// disconnects, indicating that the connection loop should restart.
+async fn wait_for_connection_event(controller: &mut WifiController<'static>) -> bool {
+    loop {
+        let event = select(
+            select(
+                WIFI_CONFIG_CHANNEL.receive(),
+                controller.wait_for_disconnect_async(),
+            ),
+            controller.wait_for_access_point_connected_event_async(),
+        )
+        .await;
+
+        match event {
+            Either::First(Either::First(credentials)) => {
+                info!("New Wi-Fi credentials received");
+
+                if apply_wifi_credentials(controller, credentials) {
+                    return true;
+                }
+
+                info!("Keeping current Wi-Fi configuration");
+            }
+
+            Either::First(Either::Second(result)) => {
+                log_station_disconnect(result);
+                return true;
+            }
+
+            Either::Second(result) => {
+                log_access_point_event(result);
+            }
+        }
+    }
+}
+
+fn log_station_disconnect(result: Result<impl defmt::Format, impl defmt::Format>) {
+    match result {
+        Ok(disconnected) => {
+            info!("Station disconnected: {:?}", disconnected);
+        }
+        Err(error) => {
+            error!("Disconnect event error: {:?}", error);
+        }
+    }
+}
+
+fn log_access_point_event(result: Result<esp_radio::wifi::ap::EventInfo, impl defmt::Format>) {
+    match result {
+        Ok(event) => match event {
+            esp_radio::wifi::ap::EventInfo::Connected(info) => {
+                info!("AP client connected: {:?}", info);
+            }
+            esp_radio::wifi::ap::EventInfo::Disconnected(info) => {
+                info!("AP client disconnected: {:?}", info);
+            }
+        },
+        Err(error) => {
+            info!("AP event error: {:?}", error);
         }
     }
 }
@@ -157,3 +222,32 @@ pub async fn net_task(mut runner: Runner<'static, Interface>) {
     runner.run().await
 }
 
+fn apply_wifi_credentials(
+    controller: &mut WifiController<'static>,
+    credentials: WifiCredentials,
+) -> bool {
+    let station_config = StationConfig::default()
+        .with_ssid(credentials.ssid.as_str().try_into().unwrap())
+        .with_authentication(AuthenticationMethodConfig::Wpa2Personal(
+            credentials.password.as_str().try_into().unwrap(),
+        ));
+
+    let ap_config = AccessPointConfig::default()
+        .with_ssid(WIFI_SSID.try_into().unwrap())
+        .with_authentication(AuthenticationMethodConfig::Wpa2Personal(
+            WIFI_PASSWORD.try_into().unwrap(),
+        ));
+
+    let config = Config::AccessPointStation(station_config, ap_config);
+
+    match controller.set_config(&config) {
+        Ok(()) => {
+            info!("Wi-Fi configuration updated");
+            true
+        }
+        Err(error) => {
+            error!("Failed to update Wi-Fi configuration: {:?}", error);
+            false
+        }
+    }
+}

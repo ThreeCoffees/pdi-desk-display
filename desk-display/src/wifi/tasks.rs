@@ -1,3 +1,4 @@
+use defmt::debug;
 use defmt::error;
 use defmt::info;
 use embassy_futures::select::select;
@@ -57,7 +58,7 @@ pub async fn sta_http_poll_task(sta_stack: Stack<'static>, url: &'static str, in
 
     loop {
         if !sta_stack.is_link_up() || sta_stack.config_v4().is_none() {
-            info!("Station is not connected; waiting...");
+            debug!("Station is not connected; waiting...");
             Timer::after(Duration::from_secs(5)).await;
             continue;
         }

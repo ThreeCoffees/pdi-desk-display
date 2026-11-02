@@ -1,5 +1,5 @@
-use embassy_sync::channel::Channel;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
+use embassy_sync::channel::Channel;
 
 #[derive(Clone)]
 pub struct WifiCredentials {

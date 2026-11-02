@@ -13,8 +13,6 @@ fn setup_env() {
     dotenvy::dotenv().expect("Failed to load .env");
 
     for key in [
-        "EXTERNAL_WIFI_SSID",
-        "EXTERNAL_WIFI_PASSWORD",
         "WIFI_SSID",
         "WIFI_PASSWORD",
     ] {

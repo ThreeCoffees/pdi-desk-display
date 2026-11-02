@@ -3,10 +3,9 @@ use core::net::Ipv4Addr;
 use defmt::info;
 use embassy_executor::Spawner;
 use embassy_futures::select::Either;
-use embassy_net::{
-    Ipv4Cidr, StackResources, StaticConfigV4, tcp::
-        client::TcpClientState,
-};
+use embassy_net::{Ipv4Cidr, StackResources};
+use embassy_net::tcp::client::TcpClientState;
+use embassy_net::StaticConfigV4;
 use esp_hal::{peripherals::WIFI, rng::Rng};
 use esp_radio::wifi::{
     Config, ap::AccessPointConfig, sta::StationConfig,

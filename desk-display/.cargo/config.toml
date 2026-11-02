@@ -2,7 +2,20 @@
 include = ["esp-config.toml"]
 
 [target.riscv32imc-unknown-none-elf]
-runner = "probe-rs run --chip=esp32c3 --preverify --always-print-stacktrace --no-location"
+runner = [
+    "probe-rs",
+    "run",
+    "--chip",
+    "esp32c3",
+    "--preverify",
+    "--always-print-stacktrace",
+    "--no-location",
+    "--log-format",
+    "[{t}] {L} {m}:{l} {s}",
+]
+
+[env]
+DEFMT_LOG = "info,desk_display=trace"
 
 [build]
 rustflags = [

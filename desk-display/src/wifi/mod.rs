@@ -1,26 +1,20 @@
 use core::net::Ipv4Addr;
-
 use defmt::info;
 use embassy_executor::Spawner;
-use embassy_futures::select::Either;
-use embassy_net::{Ipv4Cidr, StackResources};
-use embassy_net::tcp::client::TcpClientState;
 use embassy_net::StaticConfigV4;
+use embassy_net::tcp::client::TcpClientState;
+use embassy_net::{Ipv4Cidr, StackResources};
 use esp_hal::{peripherals::WIFI, rng::Rng};
-use esp_radio::wifi::{
-    Config, ap::AccessPointConfig, sta::StationConfig,
-};
 use esp_radio::wifi::ControllerConfig;
-use reqwless::{
-    client::{HttpClient, TlsConfig, TlsVerify},
-    request::Method,
-};
+use esp_radio::wifi::{Config, ap::AccessPointConfig, sta::StationConfig};
 use static_cell::StaticCell;
 
+mod connection_logic;
 mod http;
+mod rss;
+mod rss_config;
 mod tasks;
-mod config;
-mod rss_feeds;
+mod wifi_config;
 
 use tasks::{connection, net_task, sta_http_poll_task, wifi_connection_loop};
 
@@ -94,6 +88,5 @@ async fn start_wifi(spawner: Spawner, wifi_peripheral: WIFI<'static>) {
 
     spawner.spawn(wifi_connection_loop(ap_stack).unwrap());
 
-    spawner.spawn(sta_http_poll_task(sta_stack, "https://news.ycombinator.com/rss", 60).unwrap());
+    spawner.spawn(sta_http_poll_task(sta_stack, 60).unwrap());
 }
-

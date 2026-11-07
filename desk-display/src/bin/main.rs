@@ -32,10 +32,11 @@ async fn main(spawner: Spawner) -> ! {
 
     rtt_target::rtt_init_defmt!();
 
-    defmt::timestamp!("{=u64:us}",
+    defmt::timestamp!(
+        "{=u64:us}",
         esp_hal::time::Instant::now()
-        .duration_since_epoch()
-        .as_micros()
+            .duration_since_epoch()
+            .as_micros()
     );
 
     let config = esp_hal::Config::default().with_cpu_clock(CpuClock::max());
@@ -45,7 +46,6 @@ async fn main(spawner: Spawner) -> ! {
 
     let timg0 = TimerGroup::new(peripherals.TIMG0);
     esp_rtos::start(timg0.timer0, peripherals.FROM_CPU_INTR0);
-
 
     info!("Embassy initialized!");
 

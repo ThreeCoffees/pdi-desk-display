@@ -4,6 +4,10 @@ name = "desk-display"
 rust-version = "1.95"
 version = "0.1.0"
 
+[workspace]
+resolver = "2"
+members = ["rss-parser"]
+
 [[bin]]
 name = "desk-display"
 path = "./src/bin/main.rs"
@@ -79,6 +83,8 @@ heapless = "0.8.0"
 embassy-sync = { version = "0.8.0", features = ["defmt"] }
 portable-atomic = { version = "1" }
 spin = { version = "0.9.9", features = ["portable_atomic"] }
+
+rss-parser = { path = "rss-parser" }
 
 [dev-dependencies]
 embedded-test = { version = "0.7.1", features = [

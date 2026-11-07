@@ -596,6 +596,7 @@ dependencies = [
  "panic-rtt-target",
  "portable-atomic",
  "reqwless",
+ "rss-parser",
  "rtt-target",
  "smoltcp 0.14.0",
  "spin",
@@ -2457,6 +2458,13 @@ dependencies = [
  "spki",
  "subtle",
  "zeroize",
+]
+
+[[package]]
+name = "rss-parser"
+version = "0.1.0"
+dependencies = [
+ "heapless 0.8.0",
 ]
 
 [[package]]

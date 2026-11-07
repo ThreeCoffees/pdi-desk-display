@@ -102,4 +102,12 @@ impl RssFeedList {
                 core::str::from_utf8(&url[..*len]).expect("stored URLs are valid UTF-8")
             })
     }
+
+    pub fn len(&self) -> usize {
+        self.count
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.count == 0
+    }
 }

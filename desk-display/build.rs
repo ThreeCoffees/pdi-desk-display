@@ -12,12 +12,9 @@ fn setup_env() {
 
     dotenvy::dotenv().expect("Failed to load .env");
 
-    for key in [
-        "WIFI_SSID",
-        "WIFI_PASSWORD",
-    ] {
-        let value = std::env::var(key)
-            .unwrap_or_else(|_| panic!("Missing environment variable: {key}"));
+    for key in ["WIFI_SSID", "WIFI_PASSWORD"] {
+        let value =
+            std::env::var(key).unwrap_or_else(|_| panic!("Missing environment variable: {key}"));
 
         println!("cargo:rustc-env={key}={value}");
     }

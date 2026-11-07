@@ -1,3 +1,6 @@
+use defmt::error;
+use embassy_net::{Stack, tcp::TcpSocket};
+use embassy_time::Duration;
 use embedded_io_async::{Read as AsyncRead, Write as AsyncWrite};
 
 mod form;
@@ -51,4 +54,29 @@ where
     }
 
     Ok(())
+}
+
+pub async fn serve(ap_stack: Stack<'static>) {
+    let mut rx_buffer = [0u8; 1536];
+    let mut tx_buffer = [0u8; 1536];
+
+    let mut socket = TcpSocket::new(ap_stack, &mut rx_buffer, &mut tx_buffer);
+
+    socket.set_timeout(Some(Duration::from_secs(10)));
+
+    loop {
+        socket
+            .accept(embassy_net::IpListenEndpoint {
+                addr: None,
+                port: 8080,
+            })
+            .await;
+
+        if let Err(err) = handle_http_connection(&mut socket).await {
+            error!("{}", err);
+        }
+
+        socket.close();
+        socket.abort();
+    }
 }

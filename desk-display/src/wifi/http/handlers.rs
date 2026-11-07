@@ -1,12 +1,13 @@
+
 use defmt::info;
 use embedded_io_async::Write as AsyncWrite;
 use heapless::{String, Vec};
 
-use crate::wifi::config::{WIFI_CONFIG, WIFI_CONFIG_CHANNEL, WifiCredentials};
+use crate::wifi::wifi_config::{WIFI_CONFIG, WIFI_CONFIG_CHANNEL, WifiCredentials};
 use crate::wifi::http::form::is_urlencoded_form;
 use crate::wifi::http::response::send_redirect;
 use crate::wifi::http::{form::get_form_value, response::send_response};
-use crate::wifi::rss_feeds::{get_rss_feeds, save_rss_feeds};
+use crate::wifi::rss_config::{get_rss_feeds, save_rss_feeds};
 
 pub async fn handle_rss_get<S>(socket: &mut S) -> Result<(), S::Error>
 where
@@ -21,25 +22,6 @@ where
         rss_feeds.as_str(),
     )
     .await
-}
-
-pub async fn handle_wifi_get<S>(socket: &mut S) -> Result<(), S::Error>
-where
-    S: AsyncWrite,
-{
-    let ssid = WIFI_CONFIG.lock(|config| {
-        config
-            .borrow()
-            .as_ref()
-            .map(|credentials| credentials.ssid.clone())
-    });
-
-    match ssid {
-        Some(ssid) => {
-            send_response(socket, "200 OK", "text/plain; charset=utf-8", ssid.as_str()).await
-        }
-        None => send_response(socket, "200 OK", "text/plain; charset=utf-8", "").await,
-    }
 }
 
 pub async fn handle_rss_form<S>(socket: &mut S, headers: &str, body: &[u8]) -> Result<(), S::Error>
@@ -78,6 +60,25 @@ where
             "Could not save RSS feeds",
         )
         .await
+    }
+}
+
+pub async fn handle_wifi_get<S>(socket: &mut S) -> Result<(), S::Error>
+where
+    S: AsyncWrite,
+{
+    let ssid = WIFI_CONFIG.lock(|config| {
+        config
+            .borrow()
+            .as_ref()
+            .map(|credentials| credentials.ssid.clone())
+    });
+
+    match ssid {
+        Some(ssid) => {
+            send_response(socket, "200 OK", "text/plain; charset=utf-8", ssid.as_str()).await
+        }
+        None => send_response(socket, "200 OK", "text/plain; charset=utf-8", "").await,
     }
 }
 

@@ -1,4 +1,4 @@
-# Keep compilation settings in this file and user/runtime settings in `esp-config.toml`.
+# Keep compilation settings in this file and user/runtime settings in esp-config.toml.
 include = ["esp-config.toml"]
 
 [target.riscv32imc-unknown-none-elf]
@@ -17,15 +17,14 @@ runner = [
 [env]
 DEFMT_LOG = "info,desk_display=trace"
 
+[alias]
+firmware = "build -Z build-std=alloc,core"
+test-host = "test -p rss-parser --target x86_64-unknown-linux-gnu"
+
 [build]
 rustflags = [
-  # Required to obtain backtraces (e.g. when using the "esp-backtrace" crate.)
-  # NOTE: May negatively impact performance of produced code
-  "-C", "force-frame-pointers",
-  "-Z", "stack-protector=all",
+    "-C", "force-frame-pointers",
+    "-Z", "stack-protector=all",
 ]
-
 target = "riscv32imc-unknown-none-elf"
 
-[unstable]
-build-std = ["alloc", "core"]

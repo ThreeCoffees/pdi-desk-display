@@ -126,37 +126,58 @@ pub async fn connection(mut controller: WifiController<'static>) {
     info!("Start connection task");
 
     loop {
+        let credentials = WIFI_CONFIG_CHANNEL.receive().await;
+
+        if credentials.ssid.is_empty() {
+            continue;
+        }
+
+        if !apply_wifi_credentials(&mut controller, credentials) {
+            continue;
+        }
+
+        connect_station(&mut controller).await;
+    }
+}
+
+async fn connect_station(controller: &mut WifiController<'static>) {
+    loop {
         if let Err(error) = controller.connect_async().await {
             info!("Failed to connect to Wi-Fi: {:?}", error);
 
-            match select(
-                WIFI_CONFIG_CHANNEL.receive(),
-                Timer::after(Duration::from_secs(5)),
-            )
-            .await
-            {
-                Either::First(credentials) => {
-                    if apply_wifi_credentials(&mut controller, credentials) {
-                        continue;
-                    }
-                }
-                Either::Second(_) => {}
+            if handle_connection_retry(controller).await {
+                return;
             }
 
             continue;
         }
+
         info!("Wi-Fi connection started");
 
-        if wait_for_connection_event(&mut controller).await {
-            continue;
+        if wait_for_connection_event(controller).await {
+            return;
         }
     }
 }
 
-/// Waits for a station disconnect, new credentials, or an AP client event.
-///
-/// Returns `true` when the station configuration changes or the station
-/// disconnects, indicating that the connection loop should restart.
+async fn handle_connection_retry(controller: &mut WifiController<'static>) -> bool {
+    match select(
+        WIFI_CONFIG_CHANNEL.receive(),
+        Timer::after(Duration::from_secs(5)),
+    )
+    .await
+    {
+        Either::First(credentials) => {
+            if credentials.ssid.is_empty() {
+                return false;
+            }
+
+            apply_wifi_credentials(controller, credentials)
+        }
+        Either::Second(_) => false,
+    }
+}
+
 async fn wait_for_connection_event(controller: &mut WifiController<'static>) -> bool {
     loop {
         let event = select(
@@ -170,13 +191,15 @@ async fn wait_for_connection_event(controller: &mut WifiController<'static>) -> 
 
         match event {
             Either::First(Either::First(credentials)) => {
+                if credentials.ssid.is_empty() {
+                    continue;
+                }
+
                 info!("New Wi-Fi credentials received");
 
                 if apply_wifi_credentials(controller, credentials) {
                     return true;
                 }
-
-                info!("Keeping current Wi-Fi configuration");
             }
 
             Either::First(Either::Second(result)) => {

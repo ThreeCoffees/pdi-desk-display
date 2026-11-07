@@ -20,6 +20,7 @@ use static_cell::StaticCell;
 mod http;
 mod tasks;
 mod config;
+mod rss_feeds;
 
 use tasks::{connection, net_task, sta_http_poll_task, wifi_connection_loop};
 

@@ -30,11 +30,11 @@ where
         }
 
         ("GET", "/wifi") => {
-            send_response(socket, "200 OK", "text/plain; charset=utf-8", "wifi ssid").await?;
+            handlers::handle_wifi_get(socket).await?;
         }
 
         ("GET", "/rss") => {
-            send_response(socket, "200 OK", "text/plain; charset=utf-8", "rss feeds").await?;
+            handlers::handle_rss_get(socket).await?;
         }
 
         ("POST", "/save-wifi") => {

@@ -4,7 +4,7 @@ use defmt::{debug, error, info};
 use embassy_net::{
     Stack,
     dns::DnsSocket,
-    tcp::client::{TcpClient, TcpClientState},
+    tcp::client::TcpClient,
 };
 use reqwless::{
     client::{HttpClient, TlsConfig, TlsVerify},
@@ -13,7 +13,7 @@ use reqwless::{
 use rss_parser::parser::RssParser;
 use rss_parser::types::RssFeed;
 
-use super::TCP_CLIENT_STATE;
+use super::tcp_client_state;
 use super::rss_config::get_rss_feeds;
 
 pub async fn fetch_rss_feeds(sta_stack: Stack<'static>) {
@@ -31,7 +31,7 @@ pub async fn fetch_rss_feeds(sta_stack: Stack<'static>) {
 
     let tcp_client = TcpClient::new(
         sta_stack,
-        TCP_CLIENT_STATE.init(TcpClientState::<1, 1500, 1500>::new()),
+        unsafe { tcp_client_state() },
     );
 
     let dns_client = DnsSocket::new(sta_stack);

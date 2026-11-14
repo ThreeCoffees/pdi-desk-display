@@ -1,3 +1,5 @@
+use core::str;
+
 use defmt::{debug, error, info};
 use embassy_net::{
     Stack,
@@ -8,6 +10,8 @@ use reqwless::{
     client::{HttpClient, TlsConfig, TlsVerify},
     request::Method,
 };
+use rss_parser::parser::RssParser;
+use rss_parser::types::RssFeed;
 
 use super::TCP_CLIENT_STATE;
 use super::rss_config::get_rss_feeds;
@@ -82,9 +86,22 @@ async fn fetch_single_feed(
 
     info!("RSS request succeeded: {}", url);
 
-    let total_bytes = read_feed_body(url, response.body().reader()).await;
+    let mut parser = RssParser::new();
+    let total_bytes = read_feed_body(url, response.body().reader(), &mut parser).await;
 
     info!("RSS feed {}: {} bytes received", url, total_bytes);
+
+    match parser.finish() {
+        Ok(feed) => {
+            info!("Feed \"{}\": {} items", feed.title.as_str(), feed.items.len());
+            for item in feed.items.iter() {
+                info!("  - {}", item.title.as_str());
+            }
+        }
+        Err(e) => {
+            error!("RSS parse error: {}", e);
+        }
+    }
 }
 
 fn generate_tls_seed() -> u64 {
@@ -93,7 +110,7 @@ fn generate_tls_seed() -> u64 {
     (rng.random() as u64) << 32 | rng.random() as u64
 }
 
-async fn read_feed_body<R>(url: &str, mut body: R) -> usize
+async fn read_feed_body<R>(url: &str, mut body: R, parser: &mut RssParser) -> usize
 where
     R: embedded_io_async::Read,
 {
@@ -112,8 +129,9 @@ where
 
         total_bytes += n;
 
-        // TODO: Process RSS data:
-        // &chunk[..n]
+        if let Ok(text) = str::from_utf8(&chunk[..n]) {
+            parser.push(text);
+        }
     }
 
     total_bytes

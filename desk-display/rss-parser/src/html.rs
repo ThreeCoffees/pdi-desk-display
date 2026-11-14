@@ -1,14 +1,7 @@
 use heapless::String;
 
-/// Incremental HTML-to-text filter.
-///
-/// - Does not allocate.
-/// - Keeps tag/entity state across calls to `push`.
-/// - Decodes common named and numeric HTML entities.
-/// - Converts common block tags and `<br>` to line breaks.
-/// - Truncates output when its capacity is reached, but keeps consuming input.
-///
-/// The output buffer is supplied by the caller and can be reused.
+use crate::entity::decode_html_entity;
+
 pub struct HtmlToText {
     state: ParseState,
     last_was_newline: bool,
@@ -23,7 +16,7 @@ enum ParseState {
     Text,
     Tag {
         state: TagState,
-        name: String<8>,
+        name: String<10>,
         overflow: bool,
     },
     Entity(String<12>),
@@ -80,7 +73,7 @@ impl HtmlToText {
     fn process_tag<const N: usize>(
         &mut self,
         state: TagState,
-        mut name: String<8>,
+        mut name: String<10>,
         mut overflow: bool,
         ch: char,
         output: &mut String<N>,
@@ -150,7 +143,7 @@ impl HtmlToText {
         terminated: bool,
         output: &mut String<N>,
     ) {
-        if terminated && let Some(ch) = decode_entity(entity.as_str()) {
+        if terminated && let Some(ch) = decode_html_entity(entity.as_str()) {
             self.emit_char(ch, output);
             return;
         }
@@ -214,37 +207,6 @@ fn is_block_tag(name: &str) -> bool {
             | "pre"
             | "hr"
     )
-}
-
-fn decode_entity(entity: &str) -> Option<char> {
-    match entity {
-        "amp" => Some('&'),
-        "lt" => Some('<'),
-        "gt" => Some('>'),
-        "quot" => Some('"'),
-        "apos" => Some('\''),
-        "nbsp" => Some(' '),
-        "copy" => Some('©'),
-        "reg" => Some('®'),
-        "mdash" => Some('—'),
-        "ndash" => Some('–'),
-        "hellip" => Some('…'),
-        _ => decode_numeric_entity(entity),
-    }
-}
-
-fn decode_numeric_entity(entity: &str) -> Option<char> {
-    let number = if let Some(hex) = entity
-        .strip_prefix("#x")
-        .or_else(|| entity.strip_prefix("#X"))
-    {
-        u32::from_str_radix(hex, 16).ok()?
-    } else {
-        let decimal = entity.strip_prefix('#')?;
-        decimal.parse::<u32>().ok()?
-    };
-
-    char::from_u32(number)
 }
 
 #[cfg(test)]

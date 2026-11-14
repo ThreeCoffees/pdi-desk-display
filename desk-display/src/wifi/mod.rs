@@ -26,6 +26,13 @@ static STA_RESOURCES: StaticCell<StackResources<4>> = StaticCell::new();
 
 static TCP_CLIENT_STATE: StaticCell<TcpClientState<1, 1500, 1500>> = StaticCell::new();
 
+/// Returns a reference to the TCP client state.
+/// # Safety
+/// Must only be called after [`start_wifi`] has initialized [`TCP_CLIENT_STATE`].
+pub unsafe fn tcp_client_state() -> &'static mut TcpClientState<1, 1500, 1500> {
+    unsafe { &mut *(TCP_CLIENT_STATE.uninit() as *const _ as *mut TcpClientState<1, 1500, 1500>) }
+}
+
 #[embassy_executor::task]
 pub async fn wifi_start_task(spawner: Spawner, wifi: WIFI<'static>) {
     start_wifi(spawner, wifi).await;
@@ -63,6 +70,8 @@ async fn start_wifi(spawner: Spawner, wifi_peripheral: WIFI<'static>) {
 
     let rng = Rng::new();
     let seed = (rng.random() as u64) << 32 | rng.random() as u64;
+
+    TCP_CLIENT_STATE.init(TcpClientState::<1, 1500, 1500>::new());
 
     let (ap_stack, ap_runner) = embassy_net::new(
         wifi_ap_device,

@@ -17,8 +17,7 @@ use panic_rtt_target as _;
 
 extern crate alloc;
 
-// This creates a default app-descriptor required by the esp-idf bootloader.
-// For more information see: <https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/system/app_image_format.html#application-description>
+// Required by the esp-idf bootloader for the app image.
 esp_bootloader_esp_idf::esp_app_desc!();
 
 #[allow(
@@ -54,5 +53,4 @@ async fn main(spawner: Spawner) -> ! {
     loop {
         Timer::after(Duration::from_secs(1)).await;
     }
-    // for inspiration have a look at the examples at https://github.com/esp-rs/esp-hal/tree/esp-hal-v1.2.2/examples
 }

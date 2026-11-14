@@ -1,3 +1,4 @@
+use core::cell::UnsafeCell;
 use core::net::Ipv4Addr;
 use defmt::info;
 use embassy_executor::Spawner;
@@ -24,7 +25,29 @@ const WIFI_PASSWORD: &str = env!("WIFI_PASSWORD");
 static AP_RESOURCES: StaticCell<StackResources<3>> = StaticCell::new();
 static STA_RESOURCES: StaticCell<StackResources<4>> = StaticCell::new();
 
-static TCP_CLIENT_STATE: StaticCell<TcpClientState<1, 1500, 1500>> = StaticCell::new();
+/// Wrapper around the TCP client state that is safe to share across tasks.
+struct TcpClientStateWrapper {
+    inner: UnsafeCell<Option<TcpClientState<1, 1500, 1500>>>,
+}
+
+// SAFETY: exclusive access via `tcp_client_state()`, initialized once, never mutated concurrently.
+unsafe impl Sync for TcpClientStateWrapper {}
+
+static TCP_CLIENT_STATE: TcpClientStateWrapper = TcpClientStateWrapper {
+    inner: UnsafeCell::new(None),
+};
+
+/// Returns the TCP client state.
+///
+/// # Safety
+///
+/// Call only after [`start_wifi`] has initialized [`TCP_CLIENT_STATE`].
+pub unsafe fn tcp_client_state() -> &'static mut TcpClientState<1, 1500, 1500> {
+    unsafe {
+        let ptr = TCP_CLIENT_STATE.inner.get();
+        (&mut *ptr).as_mut().unwrap()
+    }
+}
 
 #[embassy_executor::task]
 pub async fn wifi_start_task(spawner: Spawner, wifi: WIFI<'static>) {
@@ -63,6 +86,12 @@ async fn start_wifi(spawner: Spawner, wifi_peripheral: WIFI<'static>) {
 
     let rng = Rng::new();
     let seed = (rng.random() as u64) << 32 | rng.random() as u64;
+
+    // SAFETY: This is called once before any other task accesses TCP_CLIENT_STATE.
+    unsafe {
+        let ptr = TCP_CLIENT_STATE.inner.get();
+        *ptr = Some(TcpClientState::<1, 1500, 1500>::new());
+    }
 
     let (ap_stack, ap_runner) = embassy_net::new(
         wifi_ap_device,

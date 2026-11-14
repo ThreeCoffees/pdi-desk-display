@@ -1,6 +1,4 @@
-//! Demo test suite using embedded-test
-//!
-//! You can run this using `cargo test` as usual.
+//! Demo test suite using embedded-test; run with `cargo test`.
 
 #![no_std]
 #![no_main]

@@ -1,0 +1,32 @@
+
+name: Rust compilation check
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ./desk-display
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install nightly Rust
+        uses: dtolnay/rust-toolchain@nightly
+
+      - name: Install ESP32-C3 target
+        run: rustup target add riscv32imc-unknown-none-elf --toolchain nightly
+
+      - name: Create .env from example
+        run: cp .env.example .env
+
+      - name: Check compilation
+        run: cargo +nightly check
+

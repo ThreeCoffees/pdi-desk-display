@@ -4,10 +4,11 @@ use defmt::info;
 use embassy_executor::Spawner;
 use embassy_net::StaticConfigV4;
 use embassy_net::tcp::client::TcpClientState;
-use embassy_net::{Ipv4Cidr, StackResources};
+use embassy_net::{Ipv4Cidr, Stack, StackResources};
 use esp_hal::{peripherals::WIFI, rng::Rng};
 use esp_radio::wifi::ControllerConfig;
 use esp_radio::wifi::{Config, ap::AccessPointConfig, sta::StationConfig};
+use leasehund::DhcpServer;
 use static_cell::StaticCell;
 
 mod connection_logic;
@@ -21,6 +22,13 @@ use tasks::{connection, net_task, sta_http_poll_task, wifi_connection_loop};
 
 const WIFI_SSID: &str = env!("WIFI_SSID");
 const WIFI_PASSWORD: &str = env!("WIFI_PASSWORD");
+
+const AP_IP_STR: &str = env!("AP_IP");
+const AP_SUBNET_MASK_STR: &str = env!("AP_SUBNET_MASK");
+const AP_GATEWAY_STR: &str = env!("AP_GATEWAY");
+const AP_DNS_SERVER_STR: &str = env!("AP_DNS_SERVER");
+const DHCP_CLIENT_IP_STR: &str = env!("DHCP_CLIENT_IP");
+const DHCP_POOL_END_STR: &str = env!("DHCP_POOL_END");
 
 static AP_RESOURCES: StaticCell<StackResources<3>> = StaticCell::new();
 static STA_RESOURCES: StaticCell<StackResources<4>> = StaticCell::new();
@@ -77,9 +85,11 @@ async fn start_wifi(spawner: Spawner, wifi_peripheral: WIFI<'static>) {
 
     info!("Wifi started");
 
+    let ap_ip = parse_ipv4(AP_IP_STR);
+    let ap_gateway = parse_ipv4(AP_GATEWAY_STR);
     let ap_config = embassy_net::Config::ipv4_static(StaticConfigV4 {
-        address: Ipv4Cidr::new(Ipv4Addr::new(192, 168, 2, 1), 24),
-        gateway: Some(Ipv4Addr::new(192, 168, 2, 1)),
+        address: Ipv4Cidr::new(ap_ip, 24),
+        gateway: Some(ap_gateway),
         dns_servers: Default::default(),
     });
     let sta_config = embassy_net::Config::dhcpv4(Default::default());
@@ -110,12 +120,72 @@ async fn start_wifi(spawner: Spawner, wifi_peripheral: WIFI<'static>) {
     spawner.spawn(net_task(ap_runner).unwrap());
     spawner.spawn(net_task(sta_runner).unwrap());
 
+    // Since only one client will ever connect, use a minimal DHCP server (2 slots — minimum required by leasehund).
+    spawner.spawn(dhcp_server_task(ap_stack).unwrap());
+
     // Wait for the AP to become operational. Do not block on external Wi-Fi.
     ap_stack.wait_config_up().await;
 
-    info!("AP `{}` ready at http://192.168.2.1:8080/", WIFI_SSID);
+    let ap = ap_ip.octets();
+    info!("AP `{}` ready at http://{}.{}.{}.{}:8080/", WIFI_SSID, ap[0], ap[1], ap[2], ap[3]);
 
     spawner.spawn(wifi_connection_loop(ap_stack).unwrap());
 
     spawner.spawn(sta_http_poll_task(sta_stack, 60).unwrap());
+}
+
+/// DHCP server task for the AP — configured for a single client (minimum 2 slots required by leasehund).
+#[embassy_executor::task]
+async fn dhcp_server_task(stack: Stack<'static>) {
+    let ap_ip = parse_ipv4(AP_IP_STR);
+    let ap_subnet_mask = parse_ipv4(AP_SUBNET_MASK_STR);
+    let ap_gateway = parse_ipv4(AP_GATEWAY_STR);
+    let ap_dns_server = parse_ipv4(AP_DNS_SERVER_STR);
+    let dhcp_client_ip = parse_ipv4(DHCP_CLIENT_IP_STR);
+    let dhcp_pool_end = parse_ipv4(DHCP_POOL_END_STR);
+    let mut server = DhcpServer::<2, 1>::new(
+        ap_ip,          // Server IP (the AP itself)
+        ap_subnet_mask, // Subnet mask
+        ap_gateway,     // Router / gateway
+        ap_dns_server,  // DNS server
+        dhcp_client_ip, // First IP in the pool
+        dhcp_pool_end,  // Last IP in the pool
+    );
+    let Err(e) = server.run(stack).await;
+    info!("DHCP server error: {:?}", e);
+}
+
+/// Parse an IP address string at runtime (e.g., "192.168.2.1").
+///
+/// Returns `0.0.0.0` on malformed input (wrong number of octets or non-numeric characters).
+fn parse_ipv4(s: &str) -> Ipv4Addr {
+    let mut octets: [u8; 4] = [0; 4];
+    let mut idx = 0usize;
+    let mut val: u8 = 0;
+    let mut valid = true;
+
+    for &b in s.as_bytes() {
+        if b == b'.' {
+            if idx >= 4 {
+                valid = false;
+                break;
+            }
+            octets[idx] = val;
+            idx += 1;
+            val = 0;
+        } else if b >= b'0' && b <= b'9' {
+            val = val * 10 + (b - b'0');
+        } else {
+            valid = false;
+            break;
+        }
+    }
+    if valid && idx < 4 {
+        octets[idx] = val;
+    }
+    if valid && idx == 3 {
+        Ipv4Addr::new(octets[0], octets[1], octets[2], octets[3])
+    } else {
+        Ipv4Addr::new(0, 0, 0, 0)
+    }
 }

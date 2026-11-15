@@ -1,4 +1,6 @@
 use core::fmt;
+
+use defmt::Format;
 use heapless::{String, Vec};
 
 pub const MAX_ITEMS: usize = 20;
@@ -20,7 +22,7 @@ pub struct RssItem {
     pub pub_date: String<64>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Format)]
 pub enum ParseError {
     Malformed,
     TooLong,

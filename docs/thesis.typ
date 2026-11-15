@@ -1,3 +1,7 @@
+// #import "template.typ": praca
+
+// #show: praca()
+
 #set text(lang: "pl")
 // #set heading(numbering:"1")
 #set page(numbering: "1")
@@ -33,7 +37,8 @@ USUŃ TĘ STRONĘ I PODMIEŃ ZA WZÓR
 
 // TODO: Wykaz ważniejszych oznaczeń i skrótów.
 
-= Wykaz oznaczeń
+= Wykaz oznaczeń i skrótów
+#lorem(10)
 
 // TODO: Rozdział 1. Wstęp i cel pracy nakreśla problematykę opisaną lub rozwiązywaną w pracy dyplomowej wraz z uzasadnieniem celowości jej realizacji. Podaje cel i ewentualnie tezę (hipotezę). Syntetycznie opisuje dotychczasowe dokonania w danej tematyce, założenia techniczne oraz może zwięźle przedstawić zawartość poszczególnych rozdziałów.
 // W przypadku pracy realizowanej przez kilku studentów, przy omawianiu zawartości rozdziałów należy podać ich autorów. Punkty stanowiące element składowy podrozdziału powinny być opracowane przez jednego autora.
@@ -82,6 +87,8 @@ Planowane zadania do wykonania:
 == ESP32
 == RSS
 == WiFi
+== HTTP
+== DHCP
 == e-ink
 
 = Architektura rozwiązania

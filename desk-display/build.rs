@@ -15,7 +15,27 @@ fn setup_env() {
     for key in ["WIFI_SSID", "WIFI_PASSWORD"] {
         let value =
             std::env::var(key).unwrap_or_else(|_| panic!("Missing environment variable: {key}"));
+        println!("cargo:rustc-env={key}={value}");
+    }
 
+    for (key, default) in [
+        ("AP_IP", None),
+        ("AP_SUBNET_MASK", None),
+        ("AP_GATEWAY", None),
+        ("AP_DNS_SERVER", None),
+        ("DHCP_CLIENT_IP", None),
+        ("DHCP_POOL_END", Some("192.168.2.200")),
+    ] {
+        let value = match std::env::var(key) {
+            Ok(v) => v,
+            Err(_) => {
+                if let Some(def) = default {
+                    def.to_string()
+                } else {
+                    panic!("Missing environment variable: {key}");
+                }
+            }
+        };
         println!("cargo:rustc-env={key}={value}");
     }
 }

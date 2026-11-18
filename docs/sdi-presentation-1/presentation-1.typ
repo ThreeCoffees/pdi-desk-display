@@ -7,7 +7,13 @@
 #import themes.simple: *
 #import themes.dewdrop: *
 
-#let show-notes = false
+#let show_notes = false
+
+#set text(hyphenate: false)
+#show table.cell: it => {
+  set par(justify: false)
+  it
+}
 
 // --- Pomocnicze: czerwone znaczniki braków (do uzupełnienia później) ---
 #let ph(body) = text(fill: red, weight: "medium")[[TODO: #body]]
@@ -20,6 +26,7 @@
 
 #show: simple-theme.with(
   aspect-ratio: "16-9",
+  navigation: none,
   config-info(
     title: [Projekt i implementacja wyświetlacza biurkowego i jego infrastruktury sieciowej],
     subtitle: [Seminarium dyplomowe, część 1: kontekst projektu],
@@ -31,7 +38,9 @@
     ],
   ),
   config-common(
-    show-notes-on-second-screen: if show-notes { right } else { none },
+    show-notes-on-second-screen: none /*if show_notes { right } else { none }*/,
+    show-only-notes: false,
+    new-section-slide-fn: none,
   ),
 )
 
@@ -192,14 +201,15 @@
   (ok. 1,5 min) Dla kogoś, kto miał jeden przedmiot o embedach: mikrokontroler to mały komputer w jednym układzie: procesor, pamięć, peryferia. ESP32 wyróżnia się tym, że radio Wi-Fi jest w środku, więc nie trzeba dokładać modułu. Dlatego stał się standardem w IoT dla hobbystów i coraz częściej w produktach.
 ]
 
-== Dlaczego ESP32-C3U
+== Dlaczego ESP32-C3
 
 - Rdzeń *RISC-V* 32-bit, do 160 MHz, 400 kB SRAM
 - Wi-Fi 2,4 GHz (802.11 b/g/n) i Bluetooth LE
-- Wi-Fi jako *punkt dostępu* (AP) *i* klient, czyli dwa tryby pracy potrzebne w naszym projekcie
+- Wi-Fi jako *punkt dostępu* (AP) *i klient* (STA), czyli dwa tryby pracy potrzebne w naszym projekcie
 - Niski pobór energii, tryby uśpienia
 - Wsparcie dla *Rusta* (`no_std`, `esp-hal`) rozwijane przez samego producenta
-- Oznaczenie *U*: #ph[co oznacza w naszym module, np. złącze anteny zewnętrznej?]
+- Konkretna wybrana płytka: ESP32-C3U M5Stamp
+#ph-fig([Zdjęcie płytki], h: 5cm)
 
 #speaker-note[
   (ok. 2 min) Kluczowy argument: obsługa trybu AP. Wybór układu był podyktowany m.in. możliwością wystawienia własnej sieci Wi-Fi, o czym więcej w części Wyzwania. C3 jest jednordzeniowy, co ma konsekwencje dla współbieżności (też tam). RISC-V to otwarta architektura zestawu instrukcji, Espressif przeszedł na nią w nowszych układach. #ph[dodać własną motywację zespołu, np. cena, dostępność, wcześniejsze doświadczenia]. Dane liczbowe warto jeszcze raz sprawdzić w datasheecie.
@@ -216,7 +226,7 @@
     [Raspberry Pi (SBC)], [komputer z Linuksem], [tak], [wyższy pobór energii, długi start, nadmiarowy do tego zadania],
     [Raspberry Pi Pico W], [MCU RP2040 z modułem Wi-Fi], [tak], [dobre wsparcie MicroPython, podobna kategoria co ESP32],
     [STM32], [rodzina ARM Cortex-M], [zwykle przez zewnętrzny moduł], [popularne w przemyśle, bogate peryferia],
-    [ESP32-C3], [MCU RISC-V z Wi-Fi i BLE], [wbudowane, AP i klient], [jednordzeniowy, niewielka pamięć, uśpienie],
+    [ESP32-C3], [MCU RISC-V z Wi-Fi i BLE], [wbudowane, AP i STA], [jednordzeniowy, niewielka pamięć, uśpienie],
   )
 ]
 
@@ -271,9 +281,9 @@
     columns: (auto, 1fr, 1fr, 1fr),
     align: left,
     [*Cecha*], [*TRMNL*], [*Seeed XIAO 7.5"*], [*Nasz projekt*],
-    [Układ], [ESP32], [ESP32-C3], [ESP32-C3U],
-    [Źródło treści], [serwer pośredniczący], [zależy od oprogramowania (ESPHome, TRMNL, Arduino)], [bezpośrednio z kanałów RSS na urządzeniu #ph[potwierdzić]],
-    [Konfiguracja], [przez aplikację / chmurę], [zależna od oprogramowania], [własny punkt dostępowy i strona WWW],
+    [Układ], [ESP32], [ESP32-C3], [ESP32-C3],
+    [Źródło treści], [serwer pośredniczący], [zależy od oprogramowania (ESPHome, TRMNL, Arduino)], [Kanały RSS skonfigurowane na urządzeniu],
+    [Konfiguracja], [przez aplikację / chmurę], [zależna od oprogramowania], [własny punkt dostępowy i gui przez HTTP],
     [Język], [C/C++ (firmware)], [Arduino / ESPHome], [*Rust* (`no_std`)],
   )
 ]
@@ -297,10 +307,10 @@
 
 == Zasady higieny
 
-- *Pełne vs częściowe odświeżanie*: częściowe szybsze, ale zostawia ducha, co jakiś czas pełne
+- *Pełne vs częściowe odświeżanie*: częściowe szybsze, ale zostawia ślad po poprzednim obrazie. Pełne wymagane co jakiś czas
 - *Uśpić panel* po każdym odświeżeniu, nie zostawiać go pod napięciem
 - *Odstęp między odświeżeniami*: wymuszać programowo, a nie ufać pętli głównej
-- *Temperatura* i zasilanie: sekwencja włączania i wyłączania zgodna z kartą katalogową
+- *Temperatura i zasilanie*: sekwencja włączania i wyłączania zgodna z kartą katalogową
 - Obraz nie powinien leżeć tygodniami bez zmian
 
 #speaker-note[
@@ -309,9 +319,7 @@
 
 == Wyzwanie 2: Wi-Fi i bezpieczeństwo
 
-#ph[do konsultacji z promotorem: zakres i głębokość tego fragmentu]
-
-- Nasz ESP32 jest jednocześnie *klientem* (łączy się z Internetem) i *punktem dostępu* (konfiguracja)
+- Nasz ESP32-C3 jest jednocześnie *klientem* (łączy się z Internetem) i *punktem dostępu* (konfiguracja)
 - AP to *wystawiona powierzchnia ataku*: każdy w zasięgu może spróbować się połączyć
 - Czego się obawiać: słabe lub domyślne hasło, konfiguracja po HTTP bez szyfrowania, brak uwierzytelnienia strony, błędy w parsowaniu danych z sieci
 - Dodatkowe ograniczenia: mało pamięci i mocy, więc TLS na MCU kosztuje
@@ -368,10 +376,11 @@
 == Typowe pułapki
 
 - *Zasoby współdzielone*: magistrala SPI wyświetlacza, radio Wi-Fi, pamięć
-- *Wyścigi i zakleszczenia*: dwa zadania zmieniają tę samą konfigurację
-- *Głodzenie*: jedno zadanie nigdy nie oddaje sterowania, a _watchdog_ resetuje urządzenie
-- *Pamięć*: sterta (_heap_) ma ograniczony rozmiar, fragmentacja i nieudane alokacje
-- *Energia*: czy uśpić płytkę w trakcie pobierania? Jak pogodzić Wi-Fi z trybami oszczędzania?
+- *Wyścigi, zakleszczenia, zagłodzenie*: potrzebujemy współbieżności, jak ją zabezpieczyć?
+- *Pamięć*: 
+  - sterta ma ograniczony rozmiar, fragmentacja i nieudane alokacje
+  - cały RAM również jest ograniczony
+- *Energia*: Kiedy możliwe jest uśpienie płytki? Jak pogodzić Wi-Fi i możliwość konfiguracji z trybami oszczędzania?
 
 #speaker-note[
   (ok. 2 min) Zamknięcie sekcji. Wszystkie trzy wyzwania łączy jedna myśl: na mikrokontrolerze *nie ma siatki bezpieczeństwa*. Zły dostęp do pamięci, zła kolejność operacji czy za częste odświeżanie przekładają się na realny, fizyczny skutek. Stąd nacisk na język i konstrukcje, które pomagają nie robić głupich błędów.
@@ -381,7 +390,7 @@
 
 == Co z tego wynika
 
-- E-ink + ESP32 to dobre dopasowanie do zadania "pokaż rzadko zmieniające się informacje"
+- E-ink + ESP32-C3 to dobre dopasowanie do zadania "pokaż rzadko zmieniające się informacje"
 - Podobne produkty istnieją, a nasz projekt jest *ćwiczeniem inżynierskim*, nie próbą podboju rynku
 - Trzy trudne tematy: *ochrona wyświetlacza*, *bezpieczeństwo Wi-Fi*, *współbieżność*
 - W części 2: architektura, implementacja i wyniki

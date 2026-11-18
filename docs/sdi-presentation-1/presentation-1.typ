@@ -18,7 +18,7 @@
   inset: 1em,
 )[#align(center + horizon)[#text(fill: red)[Miejsce na rysunek: #desc]]]
 
-#show: dewdrop-theme.with(
+#show: simple-theme.with(
   aspect-ratio: "16-9",
   config-info(
     title: [Projekt i implementacja wyświetlacza biurkowego i jego infrastruktury sieciowej],

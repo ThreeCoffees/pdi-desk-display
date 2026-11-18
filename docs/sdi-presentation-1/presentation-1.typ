@@ -53,18 +53,20 @@
   Adam Matczak, Leonard Mądzielewski \
   Promotor: dr inż. Krzysztof Bikonis \
   // Politechnika Gdańska, Wydział Elektroniki, Telekomunikacji i Informatyki
+  //
+  #speaker-note[
+    (ok. 1 min) Przedstawiamy się, podajemy tytuł i promotora. Zaznaczyć na starcie: to nie obrona, tylko opowieść o tym, *w jakim świecie* powstaje nasz projekt: jakie technologie, jakie podobne produkty i jakie pułapki. Szczegóły implementacji będą w części 2.
+  ]
+
 ])
 
-#speaker-note[
-  (ok. 1 min) Przedstawiamy się, podajemy tytuł i promotora. Zaznaczyć na starcie: to nie obrona, tylko opowieść o tym, *w jakim świecie* powstaje nasz projekt: jakie technologie, jakie podobne produkty i jakie pułapki. Szczegóły implementacji będą w części 2.
-]
 
 == Plan
 
 + Projekt: co robimy i po co
-+ Przegląd technologii: e-ink, ESP32, alternatywy
++ Przegląd technologii: e-ink, ESP32C3, alternatywy
 + Przegląd rynku: kto już to zrobił
-+ Wyzwania: trzy rzeczy, które łatwo zepsuć
++ Wyzwania: dwie rzeczy, które łatwo zepsuć
 
 #speaker-note[
   (ok. 0,5 min) Cztery bloki. Najwięcej czasu poświęcimy technologiom i wyzwaniom, bo to tam jest najwięcej rzeczy do wyniesienia dla kogoś, kto nie zajmuje się embedami na co dzień.
@@ -74,10 +76,10 @@
 
 == Co robimy
 
-- Urządzenie biurkowe z wyświetlacza e-papierowego i mikrokontrolera ESP32
-- Pokazuje *prognozę pogody* i *wiadomości* z kanałów RSS
+- Urządzenie biurkowe z wyświetlacza e-papierowego i mikrokontrolera ESP32C3
+- Pokazuje *wiadomości* z kanałów RSS oraz *prognozę pogody*
 - Po wstępnej konfiguracji działa *bez obsługi*
-- Konfiguracja z dowolnego urządzenia z przeglądarką i Wi-Fi
+- Wygodna konfiguracja z dowolnego urządzenia z przeglądarką i Wi-Fi
 
 #ph-fig([zdjęcie / render urządzenia], h: 5cm)
 
@@ -87,21 +89,13 @@
 
 == Po co, skoro mamy telefony
 
-- Każdy ma już kilka urządzeń, które pokażą pogodę i wiadomości
-- Ale: smartfon i laptop to urządzenia ogólnego przeznaczenia. Powiadomienia, aplikacje, rozpraszacze
+- Każdy ma już kilka urządzeń, które pokazują pogodę i wiadomości
+- Ale: smartfon i laptop to urządzenia ogólnego przeznaczenia; powiadomienia, aplikacje, rozpraszacze
 - Urządzenie specjalnego przeznaczenia: *zawsze widoczne, ciche, bezobsługowe*
-- Projekt nie jest innowacją produktową. Jest *ćwiczeniem inżynierskim* na styku sprzętu, sieci i oprogramowania wbudowanego
+- Nie staramy się wynaleźć koła na nowo,  a jedynie zbudować własne
 
 #speaker-note[
   (ok. 1,5 min) Uczciwie: to nie jest wynalazek, takie urządzenia istnieją (pokażemy je w przeglądzie rynku). Wartość projektu to nauka: sprzęt, sieć, Rust na mikrokontrolerze. Nisza: IoT, urządzenia peryferyjne, które robią jedną rzecz. #ph[doprecyzować motywację osobistą / zespołową]
-]
-
-== Zakres w jednym obrazku
-
-#ph-fig([schemat blokowy: Internet (RSS, pogoda) - Wi-Fi - ESP32 - e-ink; telefon - AP ESP32 - strona konfiguracyjna], h: 6.5cm)
-
-#speaker-note[
-  (ok. 1 min) Dwa połączenia Wi-Fi: jedno do konfiguracji (płytka jako punkt dostępowy), drugie do pobierania danych z Internetu (płytka jako klient). Do tego wyświetlacz. Szczegóły architektury zostawiamy na część 2. Tu tylko orientacja w terenie.
 ]
 
 = Przegląd technologii
@@ -134,10 +128,10 @@
   [
     *Wady*
     - Wolne odświeżanie: od ułamka sekundy do kilku sekund
-    - Efekt "ducha" (_ghosting_)
+    - Efekt "ghosting"
     - Ograniczona skala szarości i kolorów
     - Wrażliwość na temperaturę
-    - Niemożliwe animacje i wideo
+    - Niemożliwe płynne animacje i wideo
   ],
 )
 
@@ -165,35 +159,10 @@
   (ok. 2 min) Tabela jest jakościowa celowo. Liczby zależą od konkretnego modelu. Przejść po wierszach, zatrzymać się na OLED (uwaga na wypalanie przy statycznym obrazie) i na Memory LCD jako ciekawej alternatywie: niskie zużycie energii, szybkie odświeżanie, ale mała skala i wyższa cena. Dla nas liczy się energia i czytelność przy stałym obrazie.
 ]
 
-== E-ink w praktyce: kiedy tak, kiedy nie
-
-#grid(
-  columns: (1fr, 1fr),
-  gutter: 1.5em,
-  [
-    *Dobre dopasowanie*
-    - Czytniki e-booków
-    - Elektroniczne etykiety cenowe
-    - Dashboardy, kalendarze, rozkłady
-    - Wszystko, co zmienia się rzadko
-  ],
-  [
-    *Złe dopasowanie*
-    - Interfejsy z płynną interakcją
-    - Gry, wideo
-    - Sterowanie w czasie rzeczywistym
-    - Aplikacje wymagające pełnej palety kolorów
-  ],
-)
-
-#speaker-note[
-  (ok. 1 min) Krótki przystanek: reguła kciuka. Pytanie do publiczności: czy ktoś ma czytnik e-booków? Zwykle tak, wtedy łatwo o odniesienie.
-]
-
 == ESP32: co to jest
 
-- Rodzina mikrokontrolerów firmy *Espressif*, zintegrowane Wi-Fi i Bluetooth
-- Wiele wariantów: ESP32, S2, S3, *C3*, C6 i inne (różne rdzenie, radia, pamięci)
+- Rodzina mikrokontrolerów firmy *Espressif*, ze zintegrowanymi Wi-Fi i Bluetooth
+- Wiele wariantów: ESP32, S2, S3, *C3*, C6 i inne (różne architektury, ilości rdzeni oraz pamięci, dostępne peryferia)
 - Tani, szeroko dostępny, ogromna społeczność
 - Wspiera kilka ekosystemów: ESP-IDF, Arduino, MicroPython, Rust
 
@@ -207,7 +176,7 @@
 - Wi-Fi 2,4 GHz (802.11 b/g/n) i Bluetooth LE
 - Wi-Fi jako *punkt dostępu* (AP) *i klient* (STA), czyli dwa tryby pracy potrzebne w naszym projekcie
 - Niski pobór energii, tryby uśpienia
-- Wsparcie dla *Rusta* (`no_std`, `esp-hal`) rozwijane przez samego producenta
+- Wsparcie dla *Rusta* rozwijane przez samego producenta
 - Konkretna wybrana płytka: ESP32-C3U M5Stamp
 #ph-fig([Zdjęcie płytki], h: 5cm)
 
@@ -225,7 +194,7 @@
     [Arduino (klasyczne AVR)], [8-bitowy MCU, prosty ekosystem], [brak, trzeba dołożyć moduł], [mało pamięci, świetne do nauki],
     [Raspberry Pi (SBC)], [komputer z Linuksem], [tak], [wyższy pobór energii, długi start, nadmiarowy do tego zadania],
     [Raspberry Pi Pico W], [MCU RP2040 z modułem Wi-Fi], [tak], [dobre wsparcie MicroPython, podobna kategoria co ESP32],
-    [STM32], [rodzina ARM Cortex-M], [zwykle przez zewnętrzny moduł], [popularne w przemyśle, bogate peryferia],
+    [STM32], [rodzina ARM Cortex-M], [zwykle przez zewnętrzny moduł], [popularne w przemyśle, bogate peryferia, drogi],
     [ESP32-C3], [MCU RISC-V z Wi-Fi i BLE], [wbudowane, AP i STA], [jednordzeniowy, niewielka pamięć, uśpienie],
   )
 ]
@@ -274,55 +243,30 @@
   (ok. 2 min) Pokazać różnorodność: różne kompromisy (kolor vs szybkość odświeżania, MicroPython vs Arduino/C++). Inkplate ciekawy ekologicznie (recykling paneli). Pimoroni: kolor, ale kolorowy e-ink odświeża się wyraźnie wolniej. Ceny orientacyjne, zweryfikować. Warto pokazać 1-2 zdjęcia. #ph[dodać zdjęcia, zachować atrybucję]
 ]
 
-== Co wyróżnia nasz projekt
-
-#text(size: 0.65em)[
-  #table(
-    columns: (auto, 1fr, 1fr, 1fr),
-    align: left,
-    [*Cecha*], [*TRMNL*], [*Seeed XIAO 7.5"*], [*Nasz projekt*],
-    [Układ], [ESP32], [ESP32-C3], [ESP32-C3],
-    [Źródło treści], [serwer pośredniczący], [zależy od oprogramowania (ESPHome, TRMNL, Arduino)], [Kanały RSS skonfigurowane na urządzeniu],
-    [Konfiguracja], [przez aplikację / chmurę], [zależna od oprogramowania], [własny punkt dostępowy i gui przez HTTP],
-    [Język], [C/C++ (firmware)], [Arduino / ESPHome], [*Rust* (`no_std`)],
-  )
-]
-
-#speaker-note[
-  (ok. 1,5 min) Nie twierdzimy, że robimy lepiej. Pokazujemy, gdzie leży różnica: (1) architektura bez serwera pośredniczącego, (2) Rust na mikrokontrolerze, (3) własna ścieżka konfiguracji. Wiersze "Język" dla TRMNL i Seeed należy zweryfikować. Informacje oparte na ogólnym przeglądzie, nie na analizie kodu. #ph[uzupełnić po sprawdzeniu źródeł]
-]
-
 = Wyzwania
 
 == Wyzwanie 1: jak nie zepsuć wyświetlacza e-ink
 
-- Panel e-ink *trwale zapamiętuje* obraz, bo jest bistabilny
-- Stałe pole elektryczne i brak odświeżania mogą prowadzić do *wypalenia / degradacji*
-- Przesadne odświeżanie też szkodzi: panel ma *limit częstotliwości zmian*
-- Producenci podają konkretne zalecenia dla każdego panelu #ph[sprawdzić w datasheecie naszego modelu]
+- *Stałe pole elektryczne* może prowadzić do *wypalenia / degradacji*
+  - Uśpienie panelu po każdym odświeżeniu, nie zostawiać go pod napięciem
+- Tak samo *zbyt częste/rzadkie odświeżanie*
+  - Odstęp między odświeżeniami — wymuszać programowo, a nie ufać pętli głównej
+  - Obraz nie powinien leżeć tygodniami bez zmian
+- Należy także uważać na *częściowe odświeżanie*
+  - Pełne odświeżenie wyświetlacza co jakiś czas konieczne
+- Producenci podają konkretne zalecenia dla każdego panelu
+
 
 #speaker-note[
   (ok. 2 min) Brzmi paradoksalnie: wyświetlacz, który nie zużywa prądu, może się zepsuć od zbyt rzadkiego lub zbyt częstego użycia. Typowe zalecenia producentów (np. Waveshare, Good Display) to m.in.: odstęp między odświeżeniami rzędu minut, przynajmniej jedno odświeżenie na dobę, uśpienie panelu po odświeżeniu i przechowywanie z wyczyszczonym ekranem. Konkretne liczby zależą od modelu, więc w prezentacji podajemy zasadę, nie liczbę. #ph[wstawić liczby z naszego datasheetu]
-]
-
-== Zasady higieny
-
-- *Pełne vs częściowe odświeżanie*: częściowe szybsze, ale zostawia ślad po poprzednim obrazie. Pełne wymagane co jakiś czas
-- *Uśpić panel* po każdym odświeżeniu, nie zostawiać go pod napięciem
-- *Odstęp między odświeżeniami*: wymuszać programowo, a nie ufać pętli głównej
-- *Temperatura i zasilanie*: sekwencja włączania i wyłączania zgodna z kartą katalogową
-- Obraz nie powinien leżeć tygodniami bez zmian
-
-#speaker-note[
-  (ok. 2 min) Kluczowa myśl inżynierska: *ochrona sprzętu powinna siedzieć w kodzie, który jej nie da się obejść*. Jedna funkcja, która wszystko odświeża i pilnuje limitów, zamiast rozproszonych wywołań. W Rust można to wyrazić w systemie typów (np. stan panelu jako typ). To zostawiamy na część 2. Tu tylko idea. #ph[dodać własne doświadczenia, jeśli były problemy ze sprzętem]
 ]
 
 == Wyzwanie 2: Wi-Fi i bezpieczeństwo
 
 - Nasz ESP32-C3 jest jednocześnie *klientem* (łączy się z Internetem) i *punktem dostępu* (konfiguracja)
 - AP to *wystawiona powierzchnia ataku*: każdy w zasięgu może spróbować się połączyć
-- Czego się obawiać: słabe lub domyślne hasło, konfiguracja po HTTP bez szyfrowania, brak uwierzytelnienia strony, błędy w parsowaniu danych z sieci
-- Dodatkowe ograniczenia: mało pamięci i mocy, więc TLS na MCU kosztuje
+- Czego się obawiać: słabe hasło do AP, brak szyfrowania konfiguracji, brak uwierzytelnienia strony
+- Pełne zabezpieczenie ma swój koszt, a mamy mało pamięci i mocy, a TLS jest dość drogi (32KB na same bufory)
 
 #speaker-note[
   (ok. 2 min) Przy braku klawiatury wystawienie AP jest najprostszą ścieżką konfiguracji, ale płaci się za to ryzykiem. Mikrokontroler sam w sobie jest wrażliwy: nie ma izolacji procesów, system operacyjny nie istnieje albo jest minimalny, a jeden błąd w obsłudze pakietu to potencjalnie pełna kontrola. Cały ten slajd jest do ustalenia z promotorem: ile mówić o konkretnych rozwiązaniach, a ile o samych zagrożeniach.
@@ -330,18 +274,17 @@
 
 == Jak ograniczać ryzyko
 
-- AP z *WPA2/WPA3*, unikalnym hasłem urządzenia (nie jedno hasło dla wszystkich)
-- AP *tylko w trybie konfiguracji*, z limitem czasu, potem wyłączony
-- *Walidacja wejścia*: limity rozmiarów, brak zaufania do danych z formularza i z RSS
-- Połączenia wychodzące po *HTTPS* z weryfikacją certyfikatów, jeżeli zasoby na to pozwalają
-- Sekrety (hasło do Wi-Fi) w pamięci flash: rozważyć szyfrowanie flash i secure boot
-- Język bezpieczny pamięciowo (Rust) usuwa całą klasę błędów, ale nie wszystkie
+- AP z WPA2/WPA3, unikalnym hasłem urządzenia (nie jedno hasło dla wszystkich)
+- AP tylko w trybie konfiguracji, z limitem czasu, potem wyłączony
+- Połączenia wychodzące po HTTPS z weryfikacją certyfikatów, jeżeli zasoby na to pozwalają (jest to dość kosztowne)
+- Szyfrowanie hasła zapisanego w Flash
+- Język Rust jest bezpieczny pamięciowo, więc usuwa całą klasę błędów
 
 #speaker-note[
   (ok. 2 min) To lista wzorców, nie opis naszej implementacji. Hasło z naklejki zamiast hasła fabrycznego "admin" jest kluczowe: historia IoT zna masowe ataki na urządzenia z domyślnymi hasłami. Rust: przepełnienia bufora i use-after-free nie przejdą bez `unsafe`, ale logika biznesowa i protokoły dalej mogą mieć luki. #ph[które z tych wzorców faktycznie stosujemy: uzgodnić przed częścią 2]
 ]
 
-== Wyzwanie 3: zrównoleglenie w systemach wbudowanych
+/*== Wyzwanie 3: zrównoleglenie w systemach wbudowanych
 
 - Urządzenie robi kilka rzeczy *naraz*:
   - pobiera dane z sieci (*fetching*), czyli długie czekanie na I/O
@@ -386,14 +329,16 @@
   (ok. 2 min) Zamknięcie sekcji. Wszystkie trzy wyzwania łączy jedna myśl: na mikrokontrolerze *nie ma siatki bezpieczeństwa*. Zły dostęp do pamięci, zła kolejność operacji czy za częste odświeżanie przekładają się na realny, fizyczny skutek. Stąd nacisk na język i konstrukcje, które pomagają nie robić głupich błędów.
 ]
 
-= Podsumowanie
+*/
+= 
 
-== Co z tego wynika
+== Podsumowanie
 
 - E-ink + ESP32-C3 to dobre dopasowanie do zadania "pokaż rzadko zmieniające się informacje"
-- Podobne produkty istnieją, a nasz projekt jest *ćwiczeniem inżynierskim*, nie próbą podboju rynku
-- Trzy trudne tematy: *ochrona wyświetlacza*, *bezpieczeństwo Wi-Fi*, *współbieżność*
-- W części 2: architektura, implementacja i wyniki
+- Trzy trudne tematy: 
+  - *ochrona wyświetlacza* 
+  - *bezpieczeństwo Wi-Fi* 
+  - *współbieżność*
 
 #speaker-note[
   (ok. 1 min) Powtórzyć najważniejsze trzy zdania i zaprosić na część 2.

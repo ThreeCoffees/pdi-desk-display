@@ -81,7 +81,11 @@
 - Po wstępnej konfiguracji działa *bez obsługi*
 - Wygodna konfiguracja z dowolnego urządzenia z przeglądarką i Wi-Fi
 
-#ph-fig([zdjęcie / render urządzenia], h: 5cm)
+#figure(
+  rotate(-90deg, reflow: true)[
+    #image("parts_with_eink.jpg")
+  ]
+)
 
 #speaker-note[
   (ok. 1,5 min) Najpierw sam produkt: mała tabliczka na biurku. Ważne zdanie: "bez konieczności obsługi". Nie ma klawiatury, nie ma ekranu dotykowego. Włączasz, konfigurujesz raz, zapominasz. Zdjęcie lub render wstawimy, gdy będzie gotowa obudowa.
@@ -107,7 +111,14 @@
 - *Nie świeci*. Odbija światło otoczenia, tak jak papier
 - *Bistabilny*: obraz zostaje bez zasilania. Prąd potrzebny tylko do zmiany obrazu
 
-#ph-fig([schemat mikrokapsułek, rysunek z dokumentacji E Ink lub własny], h: 5cm)
+#figure(
+  image("eink.webp"),
+)
+#place(
+  bottom + center, 
+  dy: 15pt, 
+  text(size: 10pt)[https://www.seekink.com/wp-content/uploads/elementor/thumbs/1.-E-Ink-Catra%E2%84%A2-rn76l3a0btpd408329a3pikyjp9n1x1p1rspgweb1s.png]
+)
 
 #speaker-note[
   (ok. 2 min) Intuicja: jak magnesik na lodówce. Raz ustawisz, zostaje. Dlatego e-czytniki trzymają miesiące na baterii. Podkreślić "bistabilność": to najważniejsza własność, która później tłumaczy zarówno zalety (energia), jak i wyzwania (nie wolno trzymać obrazu w nieskończoność, o tym w części Wyzwania). Rysunek: wziąć z dokumentacji producenta lub narysować własny.
@@ -178,7 +189,6 @@
 - Niski pobór energii, tryby uśpienia
 - Wsparcie dla *Rusta* rozwijane przez samego producenta
 - Konkretna wybrana płytka: ESP32-C3U M5Stamp
-#ph-fig([Zdjęcie płytki], h: 5cm)
 
 #speaker-note[
   (ok. 2 min) Kluczowy argument: obsługa trybu AP. Wybór układu był podyktowany m.in. możliwością wystawienia własnej sieci Wi-Fi, o czym więcej w części Wyzwania. C3 jest jednordzeniowy, co ma konsekwencje dla współbieżności (też tam). RISC-V to otwarta architektura zestawu instrukcji, Espressif przeszedł na nią w nowszych układach. #ph[dodać własną motywację zespołu, np. cena, dostępność, wcześniejsze doświadczenia]. Dane liczbowe warto jeszcze raz sprawdzić w datasheecie.
@@ -213,7 +223,17 @@
 - Biblioteka kilkuset wtyczek (kalendarz, pogoda, transport...), otwarty firmware
 - Zalecane przez twórców podejście: komunikacja jednokierunkowa, urządzenie samo pyta serwer
 
-#ph-fig([zdjęcie TRMNL z oficjalnej strony / własne zdjęcie, uwaga na prawa autorskie], h: 4cm)
+#figure(
+  image("trmnl.jpg"),
+)
+#place(
+  bottom + center, 
+  dy: 15pt, 
+  text(size: 10pt)[
+    https://trmnl.com/assets/section2-1-87c3614a.jpg
+  ]
+)
+
 
 #speaker-note[
   (ok. 2 min) Dane o specyfikacji i cenach: recenzje i sklepy z 2025-2026 (m.in. The Gadgeteer, SparkFun, sklep TRMNL), do ponownego zweryfikowania przed prezentacją, bo ceny się zmieniają. Najciekawsze: *architektura*. Urządzenie jest głupie, całe renderowanie robi serwer (chmura TRMNL lub własny). Zaleta: prosta, tania płytka i łatwa rozbudowa. Wada: zależność od serwera. My robimy inaczej: pobieranie i przetwarzanie dzieje się na mikrokontrolerze. #ph[potwierdzić nasze założenia]
@@ -227,6 +247,20 @@
 - Obudowa drukowana 3D, USB-C
 - Współpracuje z Home Assistant (ESPHome), Arduino i *z TRMNL*
 - Cena około 80 USD (wg zestawienia recenzenta)
+
+#figure(
+  image("xeeed.jpg"),
+)
+#place(
+  bottom + center, 
+  dy: 25pt, 
+  block(
+    width: 70%,
+    text(size: 10pt)[
+      https://media-cdn.seeedstudio.com/cdn-cgi/image/format=auto%2Cwidth=640%2Cquality=75/media/catalog/product/cache/961a49e1875f8c1f40e5990d74e68365/1/-/1-114993635-xiao-7.5-epaper-panel.jpg
+    ]
+  )
+)
 
 #speaker-note[
   (ok. 1,5 min) Z wiki Seeed. To jest najbliższy sprzętowo kuzyn naszego projektu: ten sam układ, podobny wyświetlacz. Różnica: oni dostarczają sprzęt jako platformę do innych aplikacji, my budujemy pełne rozwiązanie od zera. Cenę podać z zastrzeżeniem. Pochodzi z porównania recenzenta i może się różnić w sklepie producenta.
@@ -351,7 +385,6 @@
 - Inkplate 6: docs.soldered.com/inkplate/6/overview
 - Pimoroni Inky Frame 7.3": opis produktu i artykuł electronics-lab.com
 - Dokumentacja Espressif: ESP32-C3 datasheet, esp-hal
-- #ph[dopisać źródła dla e-ink (E Ink Corp., Waveshare, Good Display) i dla bezpieczeństwa IoT]
 
 #speaker-note[
   Ceny i parametry produktów sprawdzić ponownie tuż przed seminarium.

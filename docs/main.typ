@@ -43,7 +43,8 @@
 
   symbols: (
     ([ESP32], [rodzina mikrokontrolerów firmy Espressif]),
-    ([e-ink lub e-papier], [technologia wyświetlaczy]),
+    ([EPD], [Electrophoretic display - wyświetlacz elektroforetyczny]),
+
   ),
 )
 
@@ -88,7 +89,28 @@ Osiągnięte zostały #placeholder([x `out of` 7]) z zamierzonych celów.
 
 
 == Wyświetlacze
-=== e-ink
+
+LCD, LED
+
+=== Papier elektroniczny
+
+Wyświetlacz e-papierowy (e-papier) znacząco różni się od wyświetlaczy LCD i LED. Jego przeznaczeniem jest imitować swoim wyglądem papier z naniesionym tuszem. Pożądane cechy takiego wyświetlacza to m.in. możliwość wyświetlania obrazu bez emitowania własnego światła, możliwość czytania w świetle słonecznym oraz, opcjonalnie, możliwość wyświetlania kolorów innych niż czerń i biel. 
+
+Istnieje wiele technologii wyświetlaczy imitujących papier, jednak projekt skupia się wokół wyświetlacza elektroforetycznego (EPD, Electrophoretic Display). @electrophoretic-display Komórki elektroforetyczne cechują się bistabilnością (w przypadku wyświetlaczy czarno-białych), tj. po odcięciu prądu od wyświetlacza piksele czarne pozostają czarne, a białe pozostają białe.
+
+==== Budowa i sposób działania komórki EPD
+
+W medium komórki EPD zawieszone są cząsteczki tuszu - białego oraz czarnego w przypadku wyświetlaczy dwukolorowych. Z dwóch stron komórki znajdują się elektrody. Jedna umieszczona jest od strony urządzenia. Druga jest przezroczysta i znajduje się od strony odbiorcy. To, która elektroda jest katodą, a która anodą, zależy od zastosowanego tuszu i tego, w jaki sposób ten przejawia zjawisko elektroforezy. Przykładowy schemat budowy komórki elektroforetycznej o dwóch kolorach przedstawia @electrophoretic-bw-schema.
+
+#figure([#placeholder([Schemat piksela elektroforetycznego])],
+  caption: [Schemat piksela elektroforetycznego]
+)<electrophoretic-bw-schema>
+
+Elektroforeza polega na tym, że pod wpływem różnych napięć pomiędzy elektrodami tusz biały i czarny przemieszczają się wewnątrz medium w różnych kierunkach - z dala od, lub w kierunku odbiorcy - przez co przesłaniają się nawzajem. Po usunięciu napięcia w komórce tusz zatrzymuje się w miejscu.
+
+==== Korzystanie z EPD
+
+#placeholder([Ta sekcja bardziej pasowałaby w rozdziale o implementacji])
 
 = Osiągnięte rezultaty
 == Konfiguracja
@@ -126,7 +148,7 @@ Wypełnione formularze są wysyłane metodą POST protokołu HTTP na mikrokontro
 
 Strona konfiguracyjna jest zbudowana w technologii Webowej z użyciem języków HTML, CSS oraz JavaScript.
 
-== e-ink
+== Wyświetlacz e-papierowy
 == RSS
 
 = Architektura rozwiązania

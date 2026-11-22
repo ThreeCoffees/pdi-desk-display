@@ -1,0 +1,12 @@
+[package]
+name = "framebuffer"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+embedded-graphics-core = "0.4"
+embassy-sync = "0.8"
+
+[dev-dependencies]
+critical-section = { version = "1.2", features = ["std"] }
+futures = "0.3"

@@ -86,6 +86,7 @@ portable-atomic = { version = "1" }
 spin = { version = "0.9.9", features = ["portable_atomic"] }
 
 rss-parser = { path = "rss-parser" }
+framebuffer = { version = "0.1.0", path = "framebuffer" }
 
 [dev-dependencies]
 embedded-test = { version = "0.7.1", features = [

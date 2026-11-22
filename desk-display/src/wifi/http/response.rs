@@ -1,15 +1,18 @@
 use core::fmt::Write;
 use embedded_io_async::Write as AsyncWrite;
 
-pub async fn send_response<S>(
+pub async fn send_response<S, B>(
     socket: &mut S,
     status: &str,
     content_type: &str,
-    body: &str,
+    body: B,
 ) -> Result<(), S::Error>
 where
     S: AsyncWrite,
+    B: AsRef<[u8]>,
 {
+    let body = body.as_ref();
+
     let mut header = heapless::String::<192>::new();
 
     let _ = write!(
@@ -26,7 +29,7 @@ where
     );
 
     socket.write_all(header.as_bytes()).await?;
-    socket.write_all(body.as_bytes()).await?;
+    socket.write_all(body).await?;
     socket.flush().await?;
 
     Ok(())

@@ -598,6 +598,7 @@ dependencies = [
  "esp-hal",
  "esp-radio",
  "esp-rtos",
+ "framebuffer",
  "heapless 0.8.0",
  "leasehund",
  "panic-rtt-target",

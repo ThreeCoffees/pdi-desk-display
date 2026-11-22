@@ -1,8 +1,8 @@
-
 use defmt::info;
 use embedded_io_async::Write as AsyncWrite;
 use heapless::{String, Vec};
 
+use crate::state::FRAME_BUFFERS;
 use crate::wifi::wifi_config::{WIFI_CONFIG, WIFI_CONFIG_CHANNEL, WifiCredentials};
 use crate::wifi::http::form::is_urlencoded_form;
 use crate::wifi::http::response::send_redirect;
@@ -152,3 +152,20 @@ async fn save_credentials(ssid: &str, password: &str) -> bool {
 
     true
 }
+
+pub async fn handle_display_get<S>(socket: &mut S) -> Result<(), S::Error>
+where
+    S: AsyncWrite,
+{
+    let front_buf = FRAME_BUFFERS.read_front().await;
+
+    send_response(
+        socket,
+        "200 OK",
+        "text/plain; charset=utf-8",
+        front_buf.as_bytes(),
+    )
+    .await
+}
+
+

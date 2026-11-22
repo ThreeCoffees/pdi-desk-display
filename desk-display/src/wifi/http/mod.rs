@@ -40,6 +40,10 @@ where
             handlers::handle_rss_get(socket).await?;
         }
 
+        ("GET", "/display") => {
+            handlers::handle_display_get(socket).await?;
+        }
+
         ("POST", "/save-wifi") => {
             handlers::handle_wifi_form(socket, request.headers(), request.body()).await?;
         }

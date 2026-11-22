@@ -25,6 +25,7 @@ test-host = "test -p rss-parser --target x86_64-unknown-linux-gnu"
 rustflags = [
     "-C", "force-frame-pointers",
     "-Z", "stack-protector=all",
+    "-Z", "allow-partial-mitigations=stack-protector",
 ]
 target = "riscv32imc-unknown-none-elf"
 

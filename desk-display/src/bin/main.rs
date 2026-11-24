@@ -8,6 +8,7 @@
 #![deny(clippy::large_stack_frames)]
 
 use defmt::info;
+use desk_display::wifi::wifi_start_task;
 use embassy_executor::Spawner;
 use embassy_time::{Duration, Timer};
 use esp_hal::clock::CpuClock;
@@ -31,6 +32,13 @@ async fn main(spawner: Spawner) -> ! {
 
     rtt_target::rtt_init_defmt!();
 
+    defmt::timestamp!(
+        "{=u64:us}",
+        esp_hal::time::Instant::now()
+            .duration_since_epoch()
+            .as_micros()
+    );
+
     let config = esp_hal::Config::default().with_cpu_clock(CpuClock::max());
     let peripherals = esp_hal::init(config);
 
@@ -41,18 +49,10 @@ async fn main(spawner: Spawner) -> ! {
 
     info!("Embassy initialized!");
 
-    let _wifi_controller =
-        esp_radio::wifi::WifiController::new(peripherals.WIFI, Default::default())
-            .expect("Failed to initialize Wi-Fi controller");
-    let _wifi_interface = esp_radio::wifi::Interface::station();
-
-    // TODO: Spawn some tasks
-    let _ = spawner;
+    spawner.spawn(wifi_start_task(spawner, peripherals.WIFI).unwrap());
 
     loop {
-        info!("Hello world!");
         Timer::after(Duration::from_secs(1)).await;
     }
-
     // for inspiration have a look at the examples at https://github.com/esp-rs/esp-hal/tree/esp-hal-v1.2.2/examples
 }

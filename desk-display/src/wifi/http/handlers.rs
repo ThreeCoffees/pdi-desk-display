@@ -162,7 +162,7 @@ where
     send_response(
         socket,
         "200 OK",
-        "text/plain; charset=utf-8",
+        "application/octet-stream",
         front_buf.as_bytes(),
     )
     .await
